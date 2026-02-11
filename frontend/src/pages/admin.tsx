@@ -1,9 +1,42 @@
+"use client"
+
+import { useState } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function AdminPage() {
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+
+    try {
+      const response = await axios.post("/api/login", {
+        username,
+        password,
+      })
+
+      console.log("Login successful:", response.data)
+      // i-redirect o gawin ang action pagkatapos ng successful login
+      // halimbawa: router.push("/dashboard")
+
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message || "Invalid credentials. Please try again."
+      setError(message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center">
 
@@ -16,7 +49,7 @@ export default function AdminPage() {
         </CardHeader>
 
         <CardContent>
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
 
             {/* Username */}
             <div className="relative">
@@ -26,8 +59,9 @@ export default function AdminPage() {
                 placeholder=" "
                 className="peer h-12"
                 required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
-
               <Label
                 htmlFor="username"
                 className="absolute left-3 top-3 text-sm text-muted-foreground
@@ -52,8 +86,9 @@ export default function AdminPage() {
                 placeholder=" "
                 className="peer h-12"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
-
               <Label
                 htmlFor="password"
                 className="absolute left-3 top-3 text-sm text-muted-foreground
@@ -70,8 +105,17 @@ export default function AdminPage() {
               </Label>
             </div>
 
-            <Button type="submit" className="w-full h-11 cursor-pointer">
-              Login
+            {/* Error Message */}
+            {error && (
+              <p className="text-sm text-red-500 text-center">{error}</p>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full h-11 cursor-pointer"
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Login"}
             </Button>
 
           </form>
