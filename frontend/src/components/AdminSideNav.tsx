@@ -2,7 +2,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard,
   Route,
-  Users,
   Settings,
   LogOut,
   Menu,

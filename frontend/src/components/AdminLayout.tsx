@@ -2,7 +2,6 @@ import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import AdminSideNav from "@/components/AdminSideNav"
-import { Activity } from "lucide-react"
 import TruckLoader from "./loader/truck"
 import axios from "axios"
 

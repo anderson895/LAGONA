@@ -389,7 +389,7 @@ export default function Routes_manages() {
                 </TableHeader>
                 <TableBody>
                   {routes.map((route) => {
-                    const VehicleIcon = getVehicleIcon(route.vehicle_type)
+                    
                     return (
                       <TableRow key={route.id}>
                         <TableCell className="font-medium">

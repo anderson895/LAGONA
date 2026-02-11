@@ -129,7 +129,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         </svg>
       </div>
 
-      <style jsx>{`
+      <style >{`
         .loader {
           width: fit-content;
           height: fit-content;

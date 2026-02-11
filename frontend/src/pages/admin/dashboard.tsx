@@ -178,6 +178,13 @@ export default function Dashboard() {
 
   return (
     <AdminLayout>
+
+     {loading ? (
+      <div className="flex h-[80vh] items-center justify-center">
+        <p className="text-gray-500 text-lg">Loading dashboard...</p>
+      </div>
+    ) : (
+
       <div className="flex flex-col gap-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -311,6 +318,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+       )}
     </AdminLayout>
   )
 }

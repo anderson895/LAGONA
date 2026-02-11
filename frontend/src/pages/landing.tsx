@@ -616,7 +616,7 @@ export default function Landing() {
                     {origin || destination ? "Mga Tugmang Ruta" : "Mga Available na Ruta"}
                   </h3>
                   <p className="text-sm mt-1 text-slate-600">
-                    {VEHICLES.find((v) => v.type === selectedVehicle)?.emoji}{" "}
+                   
                     {VEHICLES.find((v) => v.type === selectedVehicle)?.label} — 
                     {origin || destination ? " mga ruta base sa iyong search" : " lahat ng available na ruta"}
                   </p>
@@ -707,17 +707,7 @@ export default function Landing() {
               hinggil sa pamasahe ng mga pasahero. Layunin nitong mapadali ang pagpaplano ng biyahe
               at matiyak ang wastong singil batay sa distansya at ruta.
             </p>
-            <div className="mt-8 flex justify-center gap-3 flex-wrap">
-              {VEHICLES.map((v) => (
-                <Badge
-                  key={v.type}
-                  variant="outline"
-                  className="flex items-center gap-2 text-sm px-4 py-2 bg-white border-[1.5px] border-slate-200 text-[#0f2044] hover:bg-white"
-                >
-                  <span>{v.emoji}</span> {v.label}
-                </Badge>
-              ))}
-            </div>
+           
           </div>
         </section>
 
