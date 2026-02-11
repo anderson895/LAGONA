@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import func
 import uuid
 from datetime import datetime, timezone
 import enum
@@ -20,7 +21,8 @@ class User(db.Model):
     hashed_password = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)  # ← ADD THIS LINE
 
 class Route(db.Model):
     __tablename__ = "routes"
@@ -33,9 +35,9 @@ class Route(db.Model):
     vehicle_type = db.Column(db.Enum(VehicleTypeEnum), nullable=False)
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)  # ← ADD THIS LINE TOO
     
-    # ADD THIS METHOD to fix serialization
     def to_dict(self):
         return {
             'id': str(self.id),
@@ -43,7 +45,7 @@ class Route(db.Model):
             'destination': self.destination,
             'fare': float(self.fare),
             'distance_km': float(self.distance_km),
-            'vehicle_type': self.vehicle_type.value,  # Returns "jeep" not "VehicleTypeEnum.jeep"
+            'vehicle_type': self.vehicle_type.value,
             'description': self.description,
             'is_active': self.is_active
         }
