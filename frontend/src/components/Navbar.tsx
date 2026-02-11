@@ -1,8 +1,26 @@
 import { Button } from "@/components/ui/button"
 import { Bus } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
 export default function Navbar() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const handleGetStarted = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+    e.preventDefault()
+
+    if (location.pathname === "/") {
+      // Scroll sa fareForm kung nasa homepage
+      const section = document.getElementById("fareForm")
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth", block: "start" })
+      }
+    } else {
+      // Redirect sa homepage kung nasa ibang route
+      navigate("/")
+    }
+  }
+
   return (
     <nav className="w-full border-b bg-white/70 backdrop-blur sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between py-4 px-6">
@@ -16,19 +34,14 @@ export default function Navbar() {
         {/* Links */}
         <div className="flex gap-4 items-center">
           <Button variant="ghost" asChild>
-            <Link to="vehicle">Vehicle</Link>
+            <Link to="/about">About us</Link>
           </Button>
 
-          <Button variant="ghost" asChild>
-            <Link to="routes">Routes</Link>
-          </Button>
-
-          <Button variant="ghost" asChild>
-            <Link to="about">About us</Link>
-          </Button>
-
+          {/* Get Started button */}
           <Button asChild>
-            <Link to="#">Get Started</Link>
+            <Link to="#" onClick={handleGetStarted}>
+              Get Started
+            </Link>
           </Button>
         </div>
       </div>
