@@ -1,4 +1,5 @@
-import { useEffect, useState, ReactNode } from "react"
+import { useEffect, useState } from "react"
+import type { ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import AdminSideNav from "@/components/AdminSideNav"
 import { Activity } from "lucide-react"

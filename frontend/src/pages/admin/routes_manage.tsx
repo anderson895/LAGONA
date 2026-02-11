@@ -54,6 +54,9 @@ import {
   Loader2,
 } from "lucide-react"
 
+import JeepneyIcon from "@/components/icons/jeepney.svg";
+import BusIcon from "@/components/icons/bus.svg";
+import TricycleIcon from "@/components/icons/tricycle.svg";
 // API Configuration
 const API_BASE_URL = "http://localhost:5000/api"
 
@@ -79,10 +82,11 @@ interface RouteFormData {
 }
 
 const VEHICLE_TYPES = [
-  { value: "jeep", label: "Jeepney", icon: "🚐" },
-  { value: "bus", label: "Bus", icon: "🚌" },
-  { value: "tricycle", label: "Tricycle", icon: "🛺" },
-] as const; 
+  { value: "jeep", label: "Jeepney", icon: JeepneyIcon },
+  { value: "bus", label: "Bus", icon: BusIcon },
+  { value: "tricycle", label: "Tricycle", icon: TricycleIcon },
+] as const;
+ 
 
 export default function Routes_manages() {
   const [routes, setRoutes] = useState<Route[]>([])
@@ -232,10 +236,10 @@ export default function Routes_manages() {
     setIsDeleteDialogOpen(true)
   }
 
-  const getVehicleIcon = (type: string) => {
-    const vehicle = VEHICLE_TYPES.find(v => v.value === type)
-    return vehicle?.icon || Bus
-  }
+ const getVehicleIcon = (type: string) => {
+  const vehicle = VEHICLE_TYPES.find(v => v.value === type);
+  return vehicle?.icon || BusIcon; // returns string URL
+};
 
   const getVehicleLabel = (type: string) => {
     const vehicle = VEHICLE_TYPES.find(v => v.value === type)
@@ -402,9 +406,14 @@ export default function Routes_manages() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="gap-1">
-                            <VehicleIcon className="h-3 w-3" />
+                            <img
+                                src={getVehicleIcon(route.vehicle_type)}
+                                alt={getVehicleLabel(route.vehicle_type)}
+                                className="h-4 w-4"
+                            />
                             {getVehicleLabel(route.vehicle_type)}
-                          </Badge>
+                            </Badge>
+
                         </TableCell>
                         <TableCell>{route.distance_km} km</TableCell>
                         <TableCell className="font-semibold">₱{route.fare.toFixed(2)}</TableCell>
@@ -504,10 +513,11 @@ export default function Routes_manages() {
                     {VEHICLE_TYPES.map(type => (
                       <SelectItem key={type.value} value={type.value}>
                         <div className="flex items-center gap-2">
-                          <type.icon className="h-4 w-4" />
-                          {type.label}
+                            <img src={type.icon} alt={type.label} className="h-4 w-4" />
+                            {type.label}
                         </div>
-                      </SelectItem>
+                        </SelectItem>
+
                     ))}
                   </SelectContent>
                 </Select>
@@ -641,10 +651,11 @@ export default function Routes_manages() {
                     {VEHICLE_TYPES.map(type => (
                       <SelectItem key={type.value} value={type.value}>
                         <div className="flex items-center gap-2">
-                          <type.icon className="h-4 w-4" />
-                          {type.label}
+                            <img src={type.icon} alt={type.label} className="h-4 w-4" />
+                            {type.label}
                         </div>
-                      </SelectItem>
+                        </SelectItem>
+
                     ))}
                   </SelectContent>
                 </Select>

@@ -7,6 +7,10 @@ import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import axios from "axios"
 
+import JeepIcon from "@/components/icons/jeepney.svg";
+import BusIcon from "@/components/icons/bus.svg";
+import TricycleIcon from "@/components/icons/tricycle.svg";
+
 // --- Types ---
 type VehicleType = "jeep" | "bus" | "tricycle"
 
@@ -26,11 +30,12 @@ interface FareResult {
 }
 
 // --- Vehicle Config ---
-const VEHICLES: { type: VehicleType; label: string; emoji: string; desc: string }[] = [
-  { type: "jeep", label: "Jeepney", emoji: "🚐", desc: "Pinaka-popular" },
-  { type: "bus", label: "Bus", emoji: "🚌", desc: "Pangmahabang biyahe" },
-  { type: "tricycle", label: "Tricycle", emoji: "🛺", desc: "Pang-lokal" },
-]
+const VEHICLES: { type: VehicleType; label: string; icon: string; desc: string }[] = [
+  { type: "jeep", label: "Jeepney", icon: JeepIcon, desc: "Pinaka-popular" },
+  { type: "bus", label: "Bus", icon: BusIcon, desc: "Pangmahabang biyahe" },
+  { type: "tricycle", label: "Tricycle", icon: TricycleIcon, desc: "Pang-lokal" },
+];
+
 
 // --- Carousel Images ---
 const CAROUSEL_IMAGES = [
@@ -388,10 +393,10 @@ export default function Landing() {
               </div>
             </div>
 
-            <CardContent className="p-7 md:p-10 grid md:grid-cols-2 gap-8">
+            <CardContent className="p-7 md:p-10 grid md:grid-cols-2 gap-8 ">
               {/* Left — Vehicle Selection */}
               <div>
-                <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
+                <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5 " />
                 <h2 className="font-display font-bold text-lg mb-1 text-[#0f2044]">Piliin ang Sasakyan</h2>
                 <p className="text-sm mb-5 text-slate-600">Anong sasakyan ang iyong sasakay?</p>
                 <div className="grid grid-cols-3 gap-3">
@@ -399,13 +404,15 @@ export default function Landing() {
                     <button
                       key={v.type}
                       onClick={() => handleVehicleSelect(v.type)}
-                      className={`flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 transition-all ${
+                      className={`cursor-pointer flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 transition-all ${
                         selectedVehicle === v.type
                           ? "border-amber-500 bg-amber-50 shadow-[0_6px_18px_rgba(245,158,11,0.20)] -translate-y-0.5"
                           : "border-slate-200 bg-slate-50 hover:border-[#1a3362] hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,32,68,0.09)]"
                       }`}
                     >
-                      <span className="text-2xl">{v.emoji}</span>
+                      {/* Replace emoji with SVG/Image */}
+                      <img src={v.icon} alt={v.label} className="h-8 w-8" />
+
                       <span className={`font-display text-xs font-semibold ${
                         selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"
                       }`}>
@@ -416,6 +423,7 @@ export default function Landing() {
                   ))}
                 </div>
               </div>
+
 
               {/* Right — Route Input */}
               <div>
