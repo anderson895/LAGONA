@@ -1,52 +1,49 @@
-import uuid
-import enum
-from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, String, Boolean, Float, Text, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
+import uuid
+from datetime import datetime, timezone
+import enum
 
 db = SQLAlchemy()
 
-
-class VehicleTypeEnum(str, enum.Enum):
+class VehicleTypeEnum(enum.Enum):
     jeep = "jeep"
     bus = "bus"
     tricycle = "tricycle"
 
-
 class User(db.Model):
     __tablename__ = "users"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username = Column(String(50), unique=True, nullable=False, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_admin = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    def __repr__(self):
-        return f"<User(id={self.id}, username={self.username})>"
-
+    
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    hashed_password = db.Column(db.String(255), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class Route(db.Model):
     __tablename__ = "routes"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    origin = Column(String(255), nullable=False)
-    destination = Column(String(255), nullable=False)
-    fare = Column(Float, nullable=False)
-    distance_km = Column(Float, nullable=False)
-    vehicle_type = Column(
-        Enum(VehicleTypeEnum, name="vehicle_type_enum"),
-        nullable=False,
-        default=VehicleTypeEnum.jeep
-    )
-    description = Column(Text, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    def __repr__(self):
-        return f"<Route(id={self.id}, origin={self.origin}, destination={self.destination})>"
+    
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    origin = db.Column(db.String(100), nullable=False)
+    destination = db.Column(db.String(100), nullable=False)
+    fare = db.Column(db.Float, nullable=False)
+    distance_km = db.Column(db.Float, nullable=False)
+    vehicle_type = db.Column(db.Enum(VehicleTypeEnum), nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    
+    # ADD THIS METHOD to fix serialization
+    def to_dict(self):
+        return {
+            'id': str(self.id),
+            'origin': self.origin,
+            'destination': self.destination,
+            'fare': float(self.fare),
+            'distance_km': float(self.distance_km),
+            'vehicle_type': self.vehicle_type.value,  # Returns "jeep" not "VehicleTypeEnum.jeep"
+            'description': self.description,
+            'is_active': self.is_active
+        }

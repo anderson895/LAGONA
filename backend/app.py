@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from models import db, User, Route, VehicleTypeEnum
@@ -8,6 +8,7 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from flask_restx import Api, Namespace, Resource, fields
+from flask_cors import CORS
 
 # ── Load env ─────────────────────────────
 load_dotenv()
@@ -22,6 +23,17 @@ def build_db_url(raw_url: str) -> str:
 # ── Create Flask App ─────────────────────
 def create_app():
     app = Flask(__name__)
+
+    # CORS Configuration - MUST BE BEFORE ROUTES
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": ["http://localhost:5173", "http://localhost:3000"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "expose_headers": ["Content-Type"],
+            "supports_credentials": True
+        }
+    })
 
     # Database
     direct_url = build_db_url(os.getenv("DIRECT_URL"))
@@ -143,62 +155,105 @@ def create_app():
 
     @route_ns.route("")
     class RoutesResource(Resource):
-        @route_ns.marshal_list_with(route_model)
         def get(self):
-            """List all routes"""
-            return Route.query.all()
+            """List all routes with optional vehicle_type filter"""
+            try:
+                vehicle_type_param = request.args.get('vehicle_type')
+                query = Route.query.filter_by(is_active=True)
+                
+                if vehicle_type_param:
+                    # Validate vehicle type
+                    try:
+                        vehicle_enum = VehicleTypeEnum(vehicle_type_param)
+                        query = query.filter_by(vehicle_type=vehicle_enum)
+                    except ValueError:
+                        return {"message": f"Invalid vehicle_type: {vehicle_type_param}"}, 400
+                
+                routes = query.all()
+                # Use to_dict() to properly serialize
+                return [route.to_dict() for route in routes], 200
+                
+            except Exception as e:
+                print(f"Error in GET /api/routes: {str(e)}")
+                return {"message": "Internal server error", "error": str(e)}, 500
 
         @route_ns.expect(create_route_model)
-        @route_ns.marshal_with(route_model, code=201)
         def post(self):
             """Create a new route"""
-            data = request.get_json()
-            if data["vehicle_type"] not in {v.value for v in VehicleTypeEnum}:
-                route_ns.abort(400, "Invalid vehicle_type")
-            new_route = Route(
-                origin=data["origin"],
-                destination=data["destination"],
-                fare=data["fare"],
-                distance_km=data["distance_km"],
-                vehicle_type=VehicleTypeEnum(data["vehicle_type"]),
-                description=data.get("description"),
-            )
-            db.session.add(new_route)
-            db.session.commit()
-            return new_route, 201
+            try:
+                data = request.get_json()
+                
+                # Validate vehicle type
+                if data["vehicle_type"] not in {v.value for v in VehicleTypeEnum}:
+                    return {"message": "Invalid vehicle_type"}, 400
+                
+                new_route = Route(
+                    origin=data["origin"],
+                    destination=data["destination"],
+                    fare=data["fare"],
+                    distance_km=data["distance_km"],
+                    vehicle_type=VehicleTypeEnum(data["vehicle_type"]),
+                    description=data.get("description"),
+                )
+                db.session.add(new_route)
+                db.session.commit()
+                
+                return new_route.to_dict(), 201
+                
+            except Exception as e:
+                print(f"Error in POST /api/routes: {str(e)}")
+                db.session.rollback()
+                return {"message": "Internal server error", "error": str(e)}, 500
 
     @route_ns.route("/<string:route_id>")
     class RouteResource(Resource):
-        @route_ns.marshal_with(route_model)
         def get(self, route_id):
             """Get a route by ID"""
-            route = Route.query.get_or_404(route_id)
-            return route
+            try:
+                route = Route.query.get_or_404(route_id)
+                return route.to_dict(), 200
+            except Exception as e:
+                print(f"Error in GET /api/routes/{route_id}: {str(e)}")
+                return {"message": "Route not found"}, 404
 
         @route_ns.expect(create_route_model)
-        @route_ns.marshal_with(route_model)
         def put(self, route_id):
             """Update a route"""
-            route = Route.query.get_or_404(route_id)
-            data = request.get_json()
-            route.origin = data.get("origin", route.origin)
-            route.destination = data.get("destination", route.destination)
-            route.fare = data.get("fare", route.fare)
-            route.distance_km = data.get("distance_km", route.distance_km)
-            if data.get("vehicle_type"):
-                if data["vehicle_type"] not in {v.value for v in VehicleTypeEnum}:
-                    route_ns.abort(400, "Invalid vehicle_type")
-                route.vehicle_type = VehicleTypeEnum(data["vehicle_type"])
-            route.description = data.get("description", route.description)
-            db.session.commit()
-            return route
+            try:
+                route = Route.query.get_or_404(route_id)
+                data = request.get_json()
+                
+                route.origin = data.get("origin", route.origin)
+                route.destination = data.get("destination", route.destination)
+                route.fare = data.get("fare", route.fare)
+                route.distance_km = data.get("distance_km", route.distance_km)
+                
+                if data.get("vehicle_type"):
+                    if data["vehicle_type"] not in {v.value for v in VehicleTypeEnum}:
+                        return {"message": "Invalid vehicle_type"}, 400
+                    route.vehicle_type = VehicleTypeEnum(data["vehicle_type"])
+                    
+                route.description = data.get("description", route.description)
+                db.session.commit()
+                
+                return route.to_dict(), 200
+                
+            except Exception as e:
+                print(f"Error in PUT /api/routes/{route_id}: {str(e)}")
+                db.session.rollback()
+                return {"message": "Internal server error", "error": str(e)}, 500
 
         def delete(self, route_id):
             """Delete a route"""
-            route = Route.query.get_or_404(route_id)
-            db.session.delete(route)
-            db.session.commit()
-            return {"message": "Route deleted"}, 200
+            try:
+                route = Route.query.get_or_404(route_id)
+                db.session.delete(route)
+                db.session.commit()
+                return {"message": "Route deleted"}, 200
+            except Exception as e:
+                print(f"Error in DELETE /api/routes/{route_id}: {str(e)}")
+                db.session.rollback()
+                return {"message": "Internal server error", "error": str(e)}, 500
 
     api.add_namespace(route_ns, path="/api/routes")
 
@@ -208,4 +263,4 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)

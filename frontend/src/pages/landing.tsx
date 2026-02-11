@@ -16,6 +16,7 @@ interface Route {
   destination: string
   fare: number
   distance_km: number
+  vehicle_type: string
 }
 
 interface FareResult {
@@ -38,6 +39,9 @@ const CAROUSEL_IMAGES = [
   "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fdalahican.44656faa.jpg&w=384&q=75",
   "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fcalamba.7cc2e2ee.jpg&w=640&q=75",
 ]
+
+// API Base URL - adjust this to your Flask server URL
+const API_BASE_URL = "http://localhost:5000"
 
 export default function Landing() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null)
@@ -66,10 +70,16 @@ export default function Landing() {
     setDestination("")
     setRoutes([])
     setRoutesLoading(true)
+    
     try {
-      const res = await axios.get(`/api/routes`, { params: { vehicle_type: vehicle } })
-      setRoutes(res.data.routes ?? [])
-    } catch {
+      const res = await axios.get(`${API_BASE_URL}/api/routes`)
+      // Filter routes by vehicle type on the frontend
+      const filteredRoutes = (res.data || []).filter(
+        (route: Route) => route.vehicle_type === vehicle
+      )
+      setRoutes(filteredRoutes)
+    } catch (err) {
+      console.error("Error fetching routes:", err)
       setRoutes([])
     } finally {
       setRoutesLoading(false)
@@ -78,16 +88,31 @@ export default function Landing() {
 
   const handleCalculate = async () => {
     if (!selectedVehicle || !origin.trim() || !destination.trim()) return
+    
     setLoading(true)
     setResult(null)
     setError(null)
+    
     try {
-      const res = await axios.get(`/api/fare`, {
-        params: { vehicle_type: selectedVehicle, origin: origin.trim(), destination: destination.trim() },
-      })
-      setResult(res.data)
+      // Search for matching route in the routes list
+      const matchingRoute = routes.find(
+        (route) =>
+          route.origin.toLowerCase() === origin.trim().toLowerCase() &&
+          route.destination.toLowerCase() === destination.trim().toLowerCase()
+      )
+
+      if (matchingRoute) {
+        setResult({
+          route: matchingRoute,
+          fare: matchingRoute.fare,
+          breakdown: `${matchingRoute.vehicle_type} • ${matchingRoute.distance_km} km`
+        })
+      } else {
+        setError("Hindi mahanap ang ruta. Subukan ang ibang pinanggalingan o patutunguhan.")
+      }
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Hindi mahanap ang ruta. Subukan ang ibang pinanggalingan o patutunguhan.")
+      console.error("Error calculating fare:", err)
+      setError(err?.response?.data?.message || "May error sa pagkalkula ng pamasahe. Subukan ulit.")
     } finally {
       setLoading(false)
     }
@@ -141,7 +166,7 @@ export default function Landing() {
                 <div className="grid grid-cols-3 gap-3 max-w-[280px]">
                   {[
                     { label: "Sasakyan", value: "3" },
-                    { label: "Ruta", value: "50+" },
+                    { label: "Ruta", value: routes.length.toString() },
                     { label: "Bayan", value: "12" },
                   ].map((s) => (
                     <div
