@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Calculator, ArrowRight, Loader2, Navigation } from "lucide-react"
+import { MapPin, Calculator, ArrowRight, Loader2, Navigation, X } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import axios from "axios"
@@ -40,7 +40,7 @@ const CAROUSEL_IMAGES = [
   "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fcalamba.7cc2e2ee.jpg&w=640&q=75",
 ]
 
-// API Base URL - adjust this to your Flask server URL
+// API Base URL
 const API_BASE_URL = "http://localhost:5000"
 
 export default function Landing() {
@@ -53,6 +53,19 @@ export default function Landing() {
   const [routes, setRoutes] = useState<Route[]>([])
   const [routesLoading, setRoutesLoading] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [filteredRoutes, setFilteredRoutes] = useState<Route[]>([])
+  
+  // Suggestions state
+  const [originSuggestions, setOriginSuggestions] = useState<string[]>([])
+  const [destSuggestions, setDestSuggestions] = useState<string[]>([])
+  const [showOriginSuggestions, setShowOriginSuggestions] = useState(false)
+  const [showDestSuggestions, setShowDestSuggestions] = useState(false)
+  const [originFocusIndex, setOriginFocusIndex] = useState(-1)
+  const [destFocusIndex, setDestFocusIndex] = useState(-1)
+
+  // Refs for click outside
+  const originRef = useRef<HTMLDivElement>(null)
+  const destRef = useRef<HTMLDivElement>(null)
 
   // Carousel auto-scroll
   useEffect(() => {
@@ -62,6 +75,87 @@ export default function Landing() {
     return () => clearInterval(interval)
   }, [])
 
+  // Click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (originRef.current && !originRef.current.contains(event.target as Node)) {
+        setShowOriginSuggestions(false)
+      }
+      if (destRef.current && !destRef.current.contains(event.target as Node)) {
+        setShowDestSuggestions(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  // Get unique origins and destinations
+  const allOrigins = [...new Set(routes.map((r) => r.origin))].sort()
+  const allDestinations = [...new Set(routes.map((r) => r.destination))].sort()
+
+  // Filter origin suggestions based on input
+  useEffect(() => {
+    if (origin.trim() && routes.length > 0) {
+      const filtered = allOrigins.filter((o) =>
+        o.toLowerCase().includes(origin.toLowerCase())
+      )
+      setOriginSuggestions(filtered)
+    } else {
+      setOriginSuggestions(allOrigins)
+    }
+    setOriginFocusIndex(-1)
+  }, [origin, routes])
+
+  // Filter destination suggestions based on input AND selected origin
+  useEffect(() => {
+    if (routes.length > 0) {
+      let availableDests = allDestinations
+
+      // If origin is selected, only show destinations that have routes from that origin
+      if (origin.trim()) {
+        const routesFromOrigin = routes.filter(
+          (r) => r.origin.toLowerCase() === origin.toLowerCase()
+        )
+        availableDests = [...new Set(routesFromOrigin.map((r) => r.destination))].sort()
+      }
+
+      if (destination.trim()) {
+        const filtered = availableDests.filter((d) =>
+          d.toLowerCase().includes(destination.toLowerCase())
+        )
+        setDestSuggestions(filtered)
+      } else {
+        setDestSuggestions(availableDests)
+      }
+    }
+    setDestFocusIndex(-1)
+  }, [destination, origin, routes])
+
+  // Filter routes based on origin and destination input
+  useEffect(() => {
+    if (!selectedVehicle || routes.length === 0) {
+      setFilteredRoutes([])
+      return
+    }
+
+    const originLower = origin.toLowerCase().trim()
+    const destLower = destination.toLowerCase().trim()
+
+    if (!originLower && !destLower) {
+      setFilteredRoutes(routes)
+      return
+    }
+
+    const filtered = routes.filter((route) => {
+      const matchOrigin = !originLower || route.origin.toLowerCase().includes(originLower)
+      const matchDest = !destLower || route.destination.toLowerCase().includes(destLower)
+      return matchOrigin && matchDest
+    })
+
+    setFilteredRoutes(filtered)
+  }, [origin, destination, routes, selectedVehicle])
+
   const handleVehicleSelect = async (vehicle: VehicleType) => {
     setSelectedVehicle(vehicle)
     setResult(null)
@@ -69,18 +163,20 @@ export default function Landing() {
     setOrigin("")
     setDestination("")
     setRoutes([])
+    setFilteredRoutes([])
     setRoutesLoading(true)
     
     try {
       const res = await axios.get(`${API_BASE_URL}/api/routes`)
-      // Filter routes by vehicle type on the frontend
       const filteredRoutes = (res.data || []).filter(
         (route: Route) => route.vehicle_type === vehicle
       )
       setRoutes(filteredRoutes)
+      setFilteredRoutes(filteredRoutes)
     } catch (err) {
       console.error("Error fetching routes:", err)
       setRoutes([])
+      setFilteredRoutes([])
     } finally {
       setRoutesLoading(false)
     }
@@ -94,7 +190,6 @@ export default function Landing() {
     setError(null)
     
     try {
-      // Search for matching route in the routes list
       const matchingRoute = routes.find(
         (route) =>
           route.origin.toLowerCase() === origin.trim().toLowerCase() &&
@@ -107,14 +202,77 @@ export default function Landing() {
           fare: matchingRoute.fare,
           breakdown: `${matchingRoute.vehicle_type} • ${matchingRoute.distance_km} km`
         })
+        setError(null)
       } else {
-        setError("Hindi mahanap ang ruta. Subukan ang ibang pinanggalingan o patutunguhan.")
+        setError("Hindi mahanap ang eksaktong ruta. Mangyaring pumili mula sa available na mga ruta sa ibaba.")
+        setResult(null)
       }
     } catch (err: any) {
       console.error("Error calculating fare:", err)
       setError(err?.response?.data?.message || "May error sa pagkalkula ng pamasahe. Subukan ulit.")
+      setResult(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRouteCardClick = (route: Route) => {
+    setOrigin(route.origin)
+    setDestination(route.destination)
+    
+    setResult({
+      route: route,
+      fare: route.fare,
+      breakdown: `${route.vehicle_type} • ${route.distance_km} km`
+    })
+    setError(null)
+    
+    document.getElementById('fareForm')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  // Handle keyboard navigation for origin suggestions
+  const handleOriginKeyDown = (e: React.KeyboardEvent) => {
+    if (!showOriginSuggestions || originSuggestions.length === 0) return
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      setOriginFocusIndex((prev) =>
+        prev < originSuggestions.length - 1 ? prev + 1 : prev
+      )
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      setOriginFocusIndex((prev) => (prev > 0 ? prev - 1 : -1))
+    } else if (e.key === "Enter") {
+      e.preventDefault()
+      if (originFocusIndex >= 0) {
+        setOrigin(originSuggestions[originFocusIndex])
+        setShowOriginSuggestions(false)
+      }
+    } else if (e.key === "Escape") {
+      setShowOriginSuggestions(false)
+    }
+  }
+
+  // Handle keyboard navigation for destination suggestions
+  const handleDestKeyDown = (e: React.KeyboardEvent) => {
+    if (!showDestSuggestions || destSuggestions.length === 0) return
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      setDestFocusIndex((prev) =>
+        prev < destSuggestions.length - 1 ? prev + 1 : prev
+      )
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      setDestFocusIndex((prev) => (prev > 0 ? prev - 1 : -1))
+    } else if (e.key === "Enter") {
+      e.preventDefault()
+      if (destFocusIndex >= 0) {
+        setDestination(destSuggestions[destFocusIndex])
+        setShowDestSuggestions(false)
+      }
+    } else if (e.key === "Escape") {
+      setShowDestSuggestions(false)
     }
   }
 
@@ -133,13 +291,11 @@ export default function Landing() {
 
         {/* Hero Section */}
         <section className="relative bg-gradient-to-br from-[#0a1a38] via-[#0f2044] to-[#1a3362] overflow-hidden">
-          {/* Background Effects */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_50%,rgba(245,158,11,0.10)_0%,transparent_70%),radial-gradient(ellipse_40%_50%_at_5%_90%,rgba(255,255,255,0.03)_0%,transparent_60%)] pointer-events-none" />
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[length:48px_48px] pointer-events-none" />
 
           <div className="container mx-auto px-6 py-20 md:py-24 relative z-10">
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              {/* Left Content */}
               <div>
                 <Badge className="inline-flex items-center gap-1.5 bg-white/[0.08] border border-amber-500/35 text-amber-500 hover:bg-white/[0.12] font-display text-[10px] font-bold tracking-widest uppercase px-3.5 py-1 mb-5">
                   <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
@@ -166,7 +322,7 @@ export default function Landing() {
                 <div className="grid grid-cols-3 gap-3 max-w-[280px]">
                   {[
                     { label: "Sasakyan", value: "3" },
-                    { label: "Ruta", value: routes.length.toString() },
+                    { label: "Ruta", value: routes.length.toString() || "0" },
                     { label: "Bayan", value: "12" },
                   ].map((s) => (
                     <div
@@ -180,7 +336,6 @@ export default function Landing() {
                 </div>
               </div>
 
-              {/* Right Carousel */}
               <div className="hidden md:block h-[500px]">
                 <div className="relative w-full h-full overflow-hidden rounded-3xl shadow-[0_24px_64px_rgba(0,0,0,0.3)]">
                   <div
@@ -213,7 +368,6 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Wave Divider */}
           <div className="leading-none -mb-px">
             <svg viewBox="0 0 1440 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="block w-full">
               <path d="M0 56 L0 28 Q360 0 720 28 Q1080 56 1440 28 L1440 56 Z" fill="#f8fafc" />
@@ -224,7 +378,6 @@ export default function Landing() {
         {/* Fare Computation Section */}
         <section className="container mx-auto px-6 py-10" id="fareForm">
           <Card className="max-w-4xl mx-auto rounded-3xl shadow-[0_24px_64px_rgba(15,32,68,0.13),0_4px_16px_rgba(15,32,68,0.06)] border-0 overflow-hidden">
-            {/* Header Strip */}
             <div className="bg-gradient-to-r from-[#0f2044] via-[#1e3d6e] to-[#1d4fad] px-7 py-4.5 flex items-center gap-3">
               <div className="w-8.5 h-8.5 rounded-lg bg-amber-500/[0.18] flex items-center justify-center">
                 <Calculator className="w-4 h-4 text-amber-500" />
@@ -284,22 +437,51 @@ export default function Landing() {
                       </div>
                     )}
 
-                    {/* Origin Input */}
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                    {/* Origin Input with Suggestions */}
+                    <div className="relative" ref={originRef}>
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500 z-10" />
                       <input
-                        list="origin-list"
                         value={origin}
                         onChange={(e) => setOrigin(e.target.value)}
+                        onFocus={() => setShowOriginSuggestions(true)}
+                        onKeyDown={handleOriginKeyDown}
                         placeholder="Pinanggalingan"
-                        className="w-full pl-10 pr-3.5 py-3 rounded-xl border-[1.5px] border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none focus:border-[#1a3362] focus:bg-white focus:ring-[3px] focus:ring-[#1a3362]/[0.08]"
+                        className="w-full pl-10 pr-9 py-3 rounded-xl border-[1.5px] border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none focus:border-[#1a3362] focus:bg-white focus:ring-[3px] focus:ring-[#1a3362]/[0.08]"
+                        autoComplete="off"
                       />
-                      {routes.length > 0 && (
-                        <datalist id="origin-list">
-                          {[...new Set(routes.map((r) => r.origin))].map((o) => (
-                            <option key={o} value={o} />
+                      {origin && (
+                        <button
+                          onClick={() => {
+                            setOrigin("")
+                            setShowOriginSuggestions(false)
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      {/* Origin Suggestions Dropdown */}
+                      {showOriginSuggestions && originSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border-[1.5px] border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
+                          {originSuggestions.map((suggestion, idx) => (
+                            <button
+                              key={suggestion}
+                              onClick={() => {
+                                setOrigin(suggestion)
+                                setShowOriginSuggestions(false)
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
+                                idx === originFocusIndex ? "bg-slate-50" : ""
+                              } ${idx === 0 ? "rounded-t-xl" : ""} ${
+                                idx === originSuggestions.length - 1 ? "rounded-b-xl" : ""
+                              }`}
+                            >
+                              <MapPin className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                              <span className="text-slate-900">{suggestion}</span>
+                            </button>
                           ))}
-                        </datalist>
+                        </div>
                       )}
                     </div>
 
@@ -310,22 +492,51 @@ export default function Landing() {
                       </div>
                     </div>
 
-                    {/* Destination Input */}
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                    {/* Destination Input with Suggestions */}
+                    <div className="relative" ref={destRef}>
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500 z-10" />
                       <input
-                        list="dest-list"
                         value={destination}
                         onChange={(e) => setDestination(e.target.value)}
+                        onFocus={() => setShowDestSuggestions(true)}
+                        onKeyDown={handleDestKeyDown}
                         placeholder="Patutunguhan"
-                        className="w-full pl-10 pr-3.5 py-3 rounded-xl border-[1.5px] border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none focus:border-[#1a3362] focus:bg-white focus:ring-[3px] focus:ring-[#1a3362]/[0.08]"
+                        className="w-full pl-10 pr-9 py-3 rounded-xl border-[1.5px] border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none focus:border-[#1a3362] focus:bg-white focus:ring-[3px] focus:ring-[#1a3362]/[0.08]"
+                        autoComplete="off"
                       />
-                      {routes.length > 0 && (
-                        <datalist id="dest-list">
-                          {[...new Set(routes.map((r) => r.destination))].map((d) => (
-                            <option key={d} value={d} />
+                      {destination && (
+                        <button
+                          onClick={() => {
+                            setDestination("")
+                            setShowDestSuggestions(false)
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      {/* Destination Suggestions Dropdown */}
+                      {showDestSuggestions && destSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border-[1.5px] border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
+                          {destSuggestions.map((suggestion, idx) => (
+                            <button
+                              key={suggestion}
+                              onClick={() => {
+                                setDestination(suggestion)
+                                setShowDestSuggestions(false)
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
+                                idx === destFocusIndex ? "bg-slate-50" : ""
+                              } ${idx === 0 ? "rounded-t-xl" : ""} ${
+                                idx === destSuggestions.length - 1 ? "rounded-b-xl" : ""
+                              }`}
+                            >
+                              <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                              <span className="text-slate-900">{suggestion}</span>
+                            </button>
                           ))}
-                        </datalist>
+                        </div>
                       )}
                     </div>
 
@@ -393,15 +604,18 @@ export default function Landing() {
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
                 <div>
                   <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
-                  <h3 className="font-display text-2xl font-bold text-[#0f2044]">Mga Available na Ruta</h3>
+                  <h3 className="font-display text-2xl font-bold text-[#0f2044]">
+                    {origin || destination ? "Mga Tugmang Ruta" : "Mga Available na Ruta"}
+                  </h3>
                   <p className="text-sm mt-1 text-slate-600">
                     {VEHICLES.find((v) => v.type === selectedVehicle)?.emoji}{" "}
-                    {VEHICLES.find((v) => v.type === selectedVehicle)?.label} — mga pinagbibiyaheng ruta
+                    {VEHICLES.find((v) => v.type === selectedVehicle)?.label} — 
+                    {origin || destination ? " mga ruta base sa iyong search" : " lahat ng available na ruta"}
                   </p>
                 </div>
-                {!routesLoading && routes.length > 0 && (
+                {!routesLoading && filteredRoutes.length > 0 && (
                   <Badge className="self-start text-sm font-semibold px-4 py-1.5 bg-amber-100 text-amber-900 border-[1.5px] border-amber-200 hover:bg-amber-100">
-                    {routes.length} ruta
+                    {filteredRoutes.length} ruta
                   </Badge>
                 )}
               </div>
@@ -413,6 +627,14 @@ export default function Landing() {
                 </div>
               )}
 
+              {!routesLoading && filteredRoutes.length === 0 && routes.length > 0 && (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-600">
+                  <div className="text-[44px]">🔍</div>
+                  <p className="text-sm font-semibold">Walang tugmang ruta</p>
+                  <p className="text-xs text-slate-500">Subukan ang ibang pinanggalingan o patutunguhan</p>
+                </div>
+              )}
+
               {!routesLoading && routes.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-600">
                   <div className="text-[44px]">🗺️</div>
@@ -420,16 +642,12 @@ export default function Landing() {
                 </div>
               )}
 
-              {!routesLoading && routes.length > 0 && (
+              {!routesLoading && filteredRoutes.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {routes.map((route) => (
+                  {filteredRoutes.map((route) => (
                     <Card
                       key={route.id}
-                      onClick={() => {
-                        setOrigin(route.origin)
-                        setDestination(route.destination)
-                        window.scrollTo({ top: 0, behavior: "smooth" })
-                      }}
+                      onClick={() => handleRouteCardClick(route)}
                       className="border-[1.5px] border-slate-200 rounded-2xl p-4 cursor-pointer transition-all hover:border-amber-500 hover:shadow-[0_6px_20px_rgba(15,32,68,0.08)] hover:-translate-y-0.5"
                     >
                       <div className="flex items-start gap-3">
