@@ -33,10 +33,10 @@ const VEHICLES: { type: VehicleType; label: string; emoji: string; desc: string 
 
 // --- Carousel Images ---
 const CAROUSEL_IMAGES = [
-  "https://images.unsplash.com/photo-1583416750470-965b2707b355?w=600&h=700&fit=crop",
-  "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&h=700&fit=crop",
-  "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=600&h=700&fit=crop",
-  "https://images.unsplash.com/photo-1581974206253-0e2bde6d81e9?w=600&h=700&fit=crop",
+  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fayala-malls.1aa92c67.jpg&w=640&q=75",
+  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fmarket-market.0636a17d.jpg&w=640&q=75",
+  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fdalahican.44656faa.jpg&w=384&q=75",
+  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fcalamba.7cc2e2ee.jpg&w=640&q=75",
 ]
 
 export default function Landing() {
