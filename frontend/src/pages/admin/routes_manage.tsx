@@ -440,14 +440,14 @@ export default function Routes_manages() {
                               size="icon"
                               onClick={() => openEditDialog(route)}
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Pencil className="h-4 w-4 cursor-pointer" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => openDeleteDialog(route)}
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4 text-destructive cursor-pointer" />
                             </Button>
                           </div>
                         </TableCell>
