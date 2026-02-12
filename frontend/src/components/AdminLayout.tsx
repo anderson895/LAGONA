@@ -30,7 +30,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
     // Verify token and get user info using axios
     axios
-      .get("http://localhost:5000/api/auth/me", {
+      .get("https://lagona-oz9x.vercel.app/api/auth/me", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
