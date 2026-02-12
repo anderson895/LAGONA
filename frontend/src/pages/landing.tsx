@@ -46,7 +46,7 @@ const CAROUSEL_IMAGES = [
 ]
 
 // API Base URL
-const API_BASE_URL = "http://localhost:5000"
+const API_BASE_URL = "https://lagona-oz9x.vercel.app"
 
 export default function Landing() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null)

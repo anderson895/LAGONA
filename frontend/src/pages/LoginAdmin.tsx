@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Lock, User, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-const API_BASE_URL = "http://localhost:5000"
+const API_BASE_URL = "https://lagona-oz9x.vercel.app"
 
 export default function LoginAdmin() {
   const [username, setUsername] = useState("")

@@ -84,7 +84,8 @@ def create_app():
     # CORS Configuration - MUST BE BEFORE ROUTES
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:5173", "http://localhost:3000"],
+            # "origins": ["http://localhost:5173", "http://localhost:3000"],
+            "origins": ["https://lagona.vercel.app"],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "expose_headers": ["Content-Type"],

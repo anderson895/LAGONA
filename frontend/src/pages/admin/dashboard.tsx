@@ -79,7 +79,7 @@ export default function Dashboard() {
 
     try {
       const api = axios.create({
-        baseURL: "http://localhost:5000/api",
+        baseURL: "https://lagona-oz9x.vercel.app/api",
         headers: { Authorization: `Bearer ${token}` },
       })
 

@@ -58,7 +58,7 @@ import JeepneyIcon from "@/components/icons/jeepney.svg";
 import BusIcon from "@/components/icons/bus.svg";
 import TricycleIcon from "@/components/icons/tricycle.svg";
 // API Configuration
-const API_BASE_URL = "http://localhost:5000/api"
+const API_BASE_URL = "https://lagona-oz9x.vercel.app/api"
 
 // Types
 interface Route {
