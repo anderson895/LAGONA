@@ -269,7 +269,7 @@ export default function Routes_manages() {
             </p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 h-4 w-4 cursor-pointer" />
             Add Route
           </Button>
         </div>
