@@ -40,7 +40,7 @@ const VEHICLES: { type: VehicleType; label: string; icon: string; desc: string }
 // --- Carousel Images ---
 const CAROUSEL_IMAGES = [
   "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fayala-malls.1aa92c67.jpg&w=640&q=75",
-  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fmarket-market.0636a17d.jpg&w=640&q=75",
+  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fone-ayala.1706dcd3.jpg&w=640&q=75",
   "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fdalahican.44656faa.jpg&w=384&q=75",
   "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fcalamba.7cc2e2ee.jpg&w=640&q=75",
 ]
