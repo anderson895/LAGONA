@@ -318,7 +318,7 @@ export default function Account_setting() {
               )}
 
               <div className="flex justify-end">
-                <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+                <Button type="submit" disabled={saving} className="w-full sm:w-auto cursor-pointer">
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -464,7 +464,7 @@ export default function Account_setting() {
               )}
 
               <div className="flex justify-end">
-                <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+                <Button type="submit" disabled={saving} className="w-full sm:w-auto cursor-pointer">
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

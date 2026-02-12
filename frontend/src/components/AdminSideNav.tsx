@@ -104,7 +104,7 @@ export default function AdminSideNav() {
           <div className="p-4 border-t border-gray-200">
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="w-full cursor-pointer justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={handleLogout}
             >
               <LogOut className="h-5 w-5 mr-3" />
