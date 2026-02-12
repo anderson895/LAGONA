@@ -268,8 +268,8 @@ export default function Routes_manages() {
               Manage transportation routes and fares
             </p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">
-            <Plus className="mr-2 h-4 w-4 cursor-pointer" />
+          <Button onClick={() => setIsCreateDialogOpen(true)} size="lg" className="cursor-pointer">
+            <Plus className="mr-2 h-4 w-4 " />
             Add Route
           </Button>
         </div>
@@ -435,14 +435,14 @@ export default function Routes_manages() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
+                            <Button className="cursor-pointer"
                               variant="ghost"
                               size="icon"
                               onClick={() => openEditDialog(route)}
                             >
-                              <Pencil className="h-4 w-4 cursor-pointer" />
+                              <Pencil className="h-4 w-4 " />
                             </Button>
-                            <Button
+                            <Button className="cursor-pointer"
                               variant="ghost"
                               size="icon"
                               onClick={() => openDeleteDialog(route)}
@@ -571,7 +571,7 @@ export default function Routes_manages() {
               </div>
             </div>
             <DialogFooter>
-              <Button
+              <Button className="cursor-pointer"
                 variant="outline"
                 onClick={() => {
                   setIsCreateDialogOpen(false)
@@ -581,7 +581,7 @@ export default function Routes_manages() {
               >
                 Cancel
               </Button>
-              <Button onClick={handleCreateRoute} disabled={!isFormValid() || isSubmitting}>
+              <Button className="cursor-pointer" onClick={handleCreateRoute} disabled={!isFormValid() || isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
