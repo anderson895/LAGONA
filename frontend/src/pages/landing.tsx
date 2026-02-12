@@ -695,7 +695,7 @@ export default function Landing() {
           </section>
         )}
 
-        {/* Info Section */}
+        
         <section className="py-14 border-t bg-slate-50">
           <div className="container mx-auto px-6 text-center max-w-[560px]">
             <div className="flex justify-center">
@@ -707,10 +707,8 @@ export default function Landing() {
               hinggil sa pamasahe ng mga pasahero. Layunin nitong mapadali ang pagpaplano ng biyahe
               at matiyak ang wastong singil batay sa distansya at ruta.
             </p>
-           
           </div>
         </section>
-
         <Footer />
       </div>
     </div>
