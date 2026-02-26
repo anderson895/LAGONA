@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Calculator, ArrowRight, Loader2, Navigation, X } from "lucide-react"
+import { MapPin, Calculator, ArrowRight, Loader2, Navigation, X, Info } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import axios from "axios"
@@ -21,6 +21,7 @@ interface Route {
   fare: number
   distance_km: number
   vehicle_type: string
+  description?: string  // ← added
 }
 
 interface FareResult {
@@ -36,7 +37,6 @@ const VEHICLES: { type: VehicleType; label: string; icon: string; desc: string }
   { type: "tricycle", label: "Tricycle", icon: TricycleIcon, desc: "Pang-lokal" },
 ];
 
-
 // --- Carousel Images ---
 const CAROUSEL_IMAGES = [
   "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fayala-malls.1aa92c67.jpg&w=640&q=75",
@@ -47,6 +47,40 @@ const CAROUSEL_IMAGES = [
 
 // API Base URL
 const API_BASE_URL = "https://lagona-oz9x.vercel.app"
+
+// --- Skeleton Card (replaces spinner for route grid) ---
+function RouteCardSkeleton() {
+  return (
+    <div className="border-[1.5px] border-slate-100 rounded-2xl p-4 animate-pulse">
+      <div className="flex items-start gap-3">
+        <div className="flex flex-col items-center pt-0.5 gap-1 shrink-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+          <div className="w-px h-6 bg-slate-200" />
+          <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+        </div>
+        <div className="flex flex-col gap-2 flex-1">
+          <div>
+            <div className="h-2 w-8 bg-slate-200 rounded mb-1.5" />
+            <div className="h-4 w-3/4 bg-slate-200 rounded" />
+          </div>
+          <div>
+            <div className="h-2 w-10 bg-slate-200 rounded mb-1.5" />
+            <div className="h-4 w-2/3 bg-slate-200 rounded" />
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 pt-3 flex items-center justify-between border-t-[1.5px] border-slate-100">
+        <div className="h-3 w-10 bg-slate-200 rounded" />
+        <div className="h-5 w-14 bg-slate-200 rounded" />
+      </div>
+      <div className="mt-3 pt-3 border-t-[1.5px] border-slate-100 space-y-1.5">
+        <div className="h-2.5 w-full bg-slate-200 rounded" />
+        <div className="h-2.5 w-5/6 bg-slate-200 rounded" />
+        <div className="h-2.5 w-4/6 bg-slate-200 rounded" />
+      </div>
+    </div>
+  )
+}
 
 export default function Landing() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null)
@@ -59,7 +93,7 @@ export default function Landing() {
   const [routesLoading, setRoutesLoading] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [filteredRoutes, setFilteredRoutes] = useState<Route[]>([])
-  
+
   // Suggestions state
   const [originSuggestions, setOriginSuggestions] = useState<string[]>([])
   const [destSuggestions, setDestSuggestions] = useState<string[]>([])
@@ -90,75 +124,56 @@ export default function Landing() {
         setShowDestSuggestions(false)
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Get unique origins and destinations
   const allOrigins = [...new Set(routes.map((r) => r.origin))].sort()
   const allDestinations = [...new Set(routes.map((r) => r.destination))].sort()
 
-  // Filter origin suggestions based on input
   useEffect(() => {
     if (origin.trim() && routes.length > 0) {
-      const filtered = allOrigins.filter((o) =>
-        o.toLowerCase().includes(origin.toLowerCase())
-      )
-      setOriginSuggestions(filtered)
+      setOriginSuggestions(allOrigins.filter((o) => o.toLowerCase().includes(origin.toLowerCase())))
     } else {
       setOriginSuggestions(allOrigins)
     }
     setOriginFocusIndex(-1)
   }, [origin, routes])
 
-  // Filter destination suggestions based on input AND selected origin
   useEffect(() => {
     if (routes.length > 0) {
       let availableDests = allDestinations
-
-      // If origin is selected, only show destinations that have routes from that origin
       if (origin.trim()) {
-        const routesFromOrigin = routes.filter(
-          (r) => r.origin.toLowerCase() === origin.toLowerCase()
-        )
+        const routesFromOrigin = routes.filter((r) => r.origin.toLowerCase() === origin.toLowerCase())
         availableDests = [...new Set(routesFromOrigin.map((r) => r.destination))].sort()
       }
-
-      if (destination.trim()) {
-        const filtered = availableDests.filter((d) =>
-          d.toLowerCase().includes(destination.toLowerCase())
-        )
-        setDestSuggestions(filtered)
-      } else {
-        setDestSuggestions(availableDests)
-      }
+      setDestSuggestions(
+        destination.trim()
+          ? availableDests.filter((d) => d.toLowerCase().includes(destination.toLowerCase()))
+          : availableDests
+      )
     }
     setDestFocusIndex(-1)
   }, [destination, origin, routes])
 
-  // Filter routes based on origin and destination input
   useEffect(() => {
     if (!selectedVehicle || routes.length === 0) {
       setFilteredRoutes([])
       return
     }
-
     const originLower = origin.toLowerCase().trim()
     const destLower = destination.toLowerCase().trim()
-
     if (!originLower && !destLower) {
       setFilteredRoutes(routes)
       return
     }
-
-    const filtered = routes.filter((route) => {
-      const matchOrigin = !originLower || route.origin.toLowerCase().includes(originLower)
-      const matchDest = !destLower || route.destination.toLowerCase().includes(destLower)
-      return matchOrigin && matchDest
-    })
-
-    setFilteredRoutes(filtered)
+    setFilteredRoutes(
+      routes.filter((route) => {
+        const matchOrigin = !originLower || route.origin.toLowerCase().includes(originLower)
+        const matchDest = !destLower || route.destination.toLowerCase().includes(destLower)
+        return matchOrigin && matchDest
+      })
+    )
   }, [origin, destination, routes, selectedVehicle])
 
   const handleVehicleSelect = async (vehicle: VehicleType) => {
@@ -170,14 +185,11 @@ export default function Landing() {
     setRoutes([])
     setFilteredRoutes([])
     setRoutesLoading(true)
-    
     try {
       const res = await axios.get(`${API_BASE_URL}/api/routes`)
-      const filteredRoutes = (res.data || []).filter(
-        (route: Route) => route.vehicle_type === vehicle
-      )
-      setRoutes(filteredRoutes)
-      setFilteredRoutes(filteredRoutes)
+      const filtered = (res.data || []).filter((route: Route) => route.vehicle_type === vehicle)
+      setRoutes(filtered)
+      setFilteredRoutes(filtered)
     } catch (err) {
       console.error("Error fetching routes:", err)
       setRoutes([])
@@ -189,33 +201,26 @@ export default function Landing() {
 
   const handleCalculate = async () => {
     if (!selectedVehicle || !origin.trim() || !destination.trim()) return
-    
     setLoading(true)
     setResult(null)
     setError(null)
-    
     try {
       const matchingRoute = routes.find(
         (route) =>
           route.origin.toLowerCase() === origin.trim().toLowerCase() &&
           route.destination.toLowerCase() === destination.trim().toLowerCase()
       )
-
       if (matchingRoute) {
         setResult({
           route: matchingRoute,
           fare: matchingRoute.fare,
-          breakdown: `${matchingRoute.vehicle_type} • ${matchingRoute.distance_km} km`
+          breakdown: `${matchingRoute.vehicle_type} • ${matchingRoute.distance_km} km`,
         })
-        setError(null)
       } else {
         setError("Hindi mahanap ang eksaktong ruta. Mangyaring pumili mula sa available na mga ruta sa ibaba.")
-        setResult(null)
       }
     } catch (err: any) {
-      console.error("Error calculating fare:", err)
       setError(err?.response?.data?.message || "May error sa pagkalkula ng pamasahe. Subukan ulit.")
-      setResult(null)
     } finally {
       setLoading(false)
     }
@@ -224,61 +229,25 @@ export default function Landing() {
   const handleRouteCardClick = (route: Route) => {
     setOrigin(route.origin)
     setDestination(route.destination)
-    
-    setResult({
-      route: route,
-      fare: route.fare,
-      breakdown: `${route.vehicle_type} • ${route.distance_km} km`
-    })
+    setResult({ route, fare: route.fare, breakdown: `${route.vehicle_type} • ${route.distance_km} km` })
     setError(null)
-    
-    document.getElementById('fareForm')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    document.getElementById("fareForm")?.scrollIntoView({ behavior: "smooth", block: "center" })
   }
 
-  // Handle keyboard navigation for origin suggestions
   const handleOriginKeyDown = (e: React.KeyboardEvent) => {
     if (!showOriginSuggestions || originSuggestions.length === 0) return
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setOriginFocusIndex((prev) =>
-        prev < originSuggestions.length - 1 ? prev + 1 : prev
-      )
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setOriginFocusIndex((prev) => (prev > 0 ? prev - 1 : -1))
-    } else if (e.key === "Enter") {
-      e.preventDefault()
-      if (originFocusIndex >= 0) {
-        setOrigin(originSuggestions[originFocusIndex])
-        setShowOriginSuggestions(false)
-      }
-    } else if (e.key === "Escape") {
-      setShowOriginSuggestions(false)
-    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setOriginFocusIndex((p) => Math.min(p + 1, originSuggestions.length - 1)) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setOriginFocusIndex((p) => Math.max(p - 1, -1)) }
+    else if (e.key === "Enter" && originFocusIndex >= 0) { e.preventDefault(); setOrigin(originSuggestions[originFocusIndex]); setShowOriginSuggestions(false) }
+    else if (e.key === "Escape") setShowOriginSuggestions(false)
   }
 
-  // Handle keyboard navigation for destination suggestions
   const handleDestKeyDown = (e: React.KeyboardEvent) => {
     if (!showDestSuggestions || destSuggestions.length === 0) return
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setDestFocusIndex((prev) =>
-        prev < destSuggestions.length - 1 ? prev + 1 : prev
-      )
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setDestFocusIndex((prev) => (prev > 0 ? prev - 1 : -1))
-    } else if (e.key === "Enter") {
-      e.preventDefault()
-      if (destFocusIndex >= 0) {
-        setDestination(destSuggestions[destFocusIndex])
-        setShowDestSuggestions(false)
-      }
-    } else if (e.key === "Escape") {
-      setShowDestSuggestions(false)
-    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setDestFocusIndex((p) => Math.min(p + 1, destSuggestions.length - 1)) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setDestFocusIndex((p) => Math.max(p - 1, -1)) }
+    else if (e.key === "Enter" && destFocusIndex >= 0) { e.preventDefault(); setDestination(destSuggestions[destFocusIndex]); setShowDestSuggestions(false) }
+    else if (e.key === "Escape") setShowDestSuggestions(false)
   }
 
   const canCalculate = !!selectedVehicle && origin.trim().length > 0 && destination.trim().length > 0
@@ -306,34 +275,24 @@ export default function Landing() {
                   <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
                   Official Fare Inquiry System
                 </Badge>
-
                 <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight mb-5 text-white">
                   A Digital Guide
-                  <span className="block mt-1 text-amber-500">
-                    for Provincial Commuters
-                  </span>
+                  <span className="block mt-1 text-amber-500">for Provincial Commuters</span>
                 </h1>
-
                 <p className="text-base md:text-lg leading-relaxed mb-8 text-white/65 max-w-[420px]">
-                  Ibigay ang iyong pinanggalingan at patutunguhan upang malaman
-                  ang kaukulang pamasahe batay sa umiiral na rate.
+                  Ibigay ang iyong pinanggalingan at patutunguhan upang malaman ang kaukulang pamasahe batay sa umiiral na rate.
                 </p>
-
                 <div className="flex items-center gap-2 text-sm mb-10 text-white/42">
                   <Navigation className="w-4 h-4" />
                   Para sa mga commuter at pasahero ng terminal
                 </div>
-
                 <div className="grid grid-cols-3 gap-3 max-w-[280px]">
                   {[
                     { label: "Sasakyan", value: "3" },
                     { label: "Ruta", value: routes.length.toString() || "0" },
                     { label: "Bayan", value: "12" },
                   ].map((s) => (
-                    <div
-                      key={s.label}
-                      className="bg-white/[0.07] border border-white/10 rounded-xl p-3.5 text-center backdrop-blur-sm"
-                    >
+                    <div key={s.label} className="bg-white/[0.07] border border-white/10 rounded-xl p-3.5 text-center backdrop-blur-sm">
                       <div className="font-display text-xl font-bold text-amber-500">{s.value}</div>
                       <div className="text-xs mt-0.5 text-white/50">{s.label}</div>
                     </div>
@@ -343,10 +302,7 @@ export default function Landing() {
 
               <div className="hidden md:block h-[500px]">
                 <div className="relative w-full h-full overflow-hidden rounded-3xl shadow-[0_24px_64px_rgba(0,0,0,0.3)]">
-                  <div
-                    className="flex h-full transition-transform duration-700 ease-in-out"
-                    style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
-                  >
+                  <div className="flex h-full transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}>
                     {CAROUSEL_IMAGES.map((img, idx) => (
                       <div key={idx} className="min-w-full h-full relative">
                         <img src={img} alt={`Transport ${idx + 1}`} className="w-full h-full object-cover" />
@@ -356,16 +312,7 @@ export default function Landing() {
                   </div>
                   <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                     {CAROUSEL_IMAGES.map((_, idx) => (
-                      <button
-                        key={idx}
-                        className={`h-2 rounded-full transition-all cursor-pointer ${
-                          idx === currentImageIndex
-                            ? "w-6 bg-amber-500"
-                            : "w-2 bg-white/40 hover:bg-white/60"
-                        }`}
-                        onClick={() => setCurrentImageIndex(idx)}
-                        aria-label={`Go to slide ${idx + 1}`}
-                      />
+                      <button key={idx} className={`h-2 rounded-full transition-all cursor-pointer ${idx === currentImageIndex ? "w-6 bg-amber-500" : "w-2 bg-white/40 hover:bg-white/60"}`} onClick={() => setCurrentImageIndex(idx)} aria-label={`Go to slide ${idx + 1}`} />
                     ))}
                   </div>
                 </div>
@@ -393,10 +340,10 @@ export default function Landing() {
               </div>
             </div>
 
-            <CardContent className="p-7 md:p-10 grid md:grid-cols-2 gap-8 ">
+            <CardContent className="p-7 md:p-10 grid md:grid-cols-2 gap-8">
               {/* Left — Vehicle Selection */}
               <div>
-                <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5 " />
+                <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
                 <h2 className="font-display font-bold text-lg mb-1 text-[#0f2044]">Piliin ang Sasakyan</h2>
                 <p className="text-sm mb-5 text-slate-600">Anong sasakyan ang iyong sasakay?</p>
                 <div className="grid grid-cols-3 gap-3">
@@ -410,20 +357,13 @@ export default function Landing() {
                           : "border-slate-200 bg-slate-50 hover:border-[#1a3362] hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,32,68,0.09)]"
                       }`}
                     >
-                      {/* Replace emoji with SVG/Image */}
                       <img src={v.icon} alt={v.label} className="h-8 w-8" />
-
-                      <span className={`font-display text-xs font-semibold ${
-                        selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"
-                      }`}>
-                        {v.label}
-                      </span>
+                      <span className={`font-display text-xs font-semibold ${selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"}`}>{v.label}</span>
                       <span className="text-[10px] text-slate-600">{v.desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
-
 
               {/* Right — Route Input */}
               <div>
@@ -445,7 +385,7 @@ export default function Landing() {
                       </div>
                     )}
 
-                    {/* Origin Input with Suggestions */}
+                    {/* Origin */}
                     <div className="relative" ref={originRef}>
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500 z-10" />
                       <input
@@ -458,33 +398,15 @@ export default function Landing() {
                         autoComplete="off"
                       />
                       {origin && (
-                        <button
-                          onClick={() => {
-                            setOrigin("")
-                            setShowOriginSuggestions(false)
-                          }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
-                        >
+                        <button onClick={() => { setOrigin(""); setShowOriginSuggestions(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10">
                           <X className="w-4 h-4" />
                         </button>
                       )}
-                      
-                      {/* Origin Suggestions Dropdown */}
                       {showOriginSuggestions && originSuggestions.length > 0 && (
                         <div className="absolute top-full left-0 right-0 mt-1 bg-white border-[1.5px] border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
                           {originSuggestions.map((suggestion, idx) => (
-                            <button
-                              key={suggestion}
-                              onClick={() => {
-                                setOrigin(suggestion)
-                                setShowOriginSuggestions(false)
-                              }}
-                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
-                                idx === originFocusIndex ? "bg-slate-50" : ""
-                              } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                                idx === originSuggestions.length - 1 ? "rounded-b-xl" : ""
-                              }`}
-                            >
+                            <button key={suggestion} onClick={() => { setOrigin(suggestion); setShowOriginSuggestions(false) }}
+                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${idx === originFocusIndex ? "bg-slate-50" : ""} ${idx === 0 ? "rounded-t-xl" : ""} ${idx === originSuggestions.length - 1 ? "rounded-b-xl" : ""}`}>
                               <MapPin className="w-3.5 h-3.5 text-green-500 shrink-0" />
                               <span className="text-slate-900">{suggestion}</span>
                             </button>
@@ -493,14 +415,13 @@ export default function Landing() {
                       )}
                     </div>
 
-                    {/* Connector */}
                     <div className="flex justify-center">
                       <div className="rounded-full p-1.5 bg-slate-50 border-[1.5px] border-slate-200">
                         <ArrowRight className="w-3 h-3 rotate-90 text-slate-600" />
                       </div>
                     </div>
 
-                    {/* Destination Input with Suggestions */}
+                    {/* Destination */}
                     <div className="relative" ref={destRef}>
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500 z-10" />
                       <input
@@ -513,33 +434,15 @@ export default function Landing() {
                         autoComplete="off"
                       />
                       {destination && (
-                        <button
-                          onClick={() => {
-                            setDestination("")
-                            setShowDestSuggestions(false)
-                          }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
-                        >
+                        <button onClick={() => { setDestination(""); setShowDestSuggestions(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10">
                           <X className="w-4 h-4" />
                         </button>
                       )}
-                      
-                      {/* Destination Suggestions Dropdown */}
                       {showDestSuggestions && destSuggestions.length > 0 && (
                         <div className="absolute top-full left-0 right-0 mt-1 bg-white border-[1.5px] border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
                           {destSuggestions.map((suggestion, idx) => (
-                            <button
-                              key={suggestion}
-                              onClick={() => {
-                                setDestination(suggestion)
-                                setShowDestSuggestions(false)
-                              }}
-                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
-                                idx === destFocusIndex ? "bg-slate-50" : ""
-                              } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                                idx === destSuggestions.length - 1 ? "rounded-b-xl" : ""
-                              }`}
-                            >
+                            <button key={suggestion} onClick={() => { setDestination(suggestion); setShowDestSuggestions(false) }}
+                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${idx === destFocusIndex ? "bg-slate-50" : ""} ${idx === 0 ? "rounded-t-xl" : ""} ${idx === destSuggestions.length - 1 ? "rounded-b-xl" : ""}`}>
                               <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
                               <span className="text-slate-900">{suggestion}</span>
                             </button>
@@ -548,53 +451,53 @@ export default function Landing() {
                       )}
                     </div>
 
-                    {/* Calculate Button */}
                     <Button
                       onClick={handleCalculate}
                       disabled={!canCalculate || loading}
                       className="w-full h-12 rounded-xl bg-gradient-to-br from-[#0f2044] to-[#1e3d6e] text-white font-semibold text-sm shadow-[0_4px_14px_rgba(15,32,68,0.22)] hover:shadow-[0_8px_22px_rgba(15,32,68,0.28)] hover:-translate-y-0.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Kinukuha ang pamasahe…
-                        </>
+                        <><Loader2 className="w-4 h-4 animate-spin mr-2" />Kinukuha ang pamasahe…</>
                       ) : (
-                        <>
-                          <Calculator className="w-4 h-4 mr-2" />
-                          Kalkulahin ang Pamasahe
-                        </>
+                        <><Calculator className="w-4 h-4 mr-2" />Kalkulahin ang Pamasahe</>
                       )}
                     </Button>
 
-                    {/* Error Message */}
                     {error && (
                       <div className="text-sm rounded-xl px-4 py-3 text-center bg-red-50 border-[1.5px] border-red-200 text-red-500 animate-in fade-in">
                         {error}
                       </div>
                     )}
 
-                    {/* Result Card */}
+                    {/* ── Result Card with description ── */}
                     {result && (
-                      <Card className="bg-gradient-to-br from-[#0f2044] to-[#1e3d6e] border-0 rounded-2xl p-5 text-center shadow-[0_8px_28px_rgba(15,32,68,0.22)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <p className="text-xs uppercase tracking-widest font-semibold mb-1 text-white/45">
-                          Pamasahe
-                        </p>
-                        <p className="font-display text-4xl font-bold mb-2 text-amber-500">
-                          ₱{result.fare?.toFixed(2)}
-                        </p>
-                        <div className="flex items-center justify-center gap-2 text-sm mb-2 text-white/80">
-                          <span>{result.route?.origin}</span>
-                          <ArrowRight className="w-3 h-3 text-white/35" />
-                          <span>{result.route?.destination}</span>
+                      <Card className="bg-gradient-to-br from-[#0f2044] to-[#1e3d6e] border-0 rounded-2xl p-5 shadow-[0_8px_28px_rgba(15,32,68,0.22)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="text-center">
+                          <p className="text-xs uppercase tracking-widest font-semibold mb-1 text-white/45">Pamasahe</p>
+                          <p className="font-display text-4xl font-bold mb-2 text-amber-500">₱{result.fare?.toFixed(2)}</p>
+                          <div className="flex items-center justify-center gap-2 text-sm mb-2 text-white/80">
+                            <span>{result.route?.origin}</span>
+                            <ArrowRight className="w-3 h-3 text-white/35" />
+                            <span>{result.route?.destination}</span>
+                          </div>
+                          {result.route?.distance_km && (
+                            <p className="text-xs text-white/40">{result.route.distance_km} km</p>
+                          )}
+                          {result.breakdown && (
+                            <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">{result.breakdown}</p>
+                          )}
                         </div>
-                        {result.route?.distance_km && (
-                          <p className="text-xs text-white/40">{result.route.distance_km} km</p>
-                        )}
-                        {result.breakdown && (
-                          <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">
-                            {result.breakdown}
-                          </p>
+
+                        {/* Description in result card */}
+                        {result.route?.description && (
+                          <div className="mt-4 pt-4 border-t border-white/10">
+                            <div className="flex items-start gap-2">
+                              <Info className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                              <p className="text-xs text-white/60 leading-relaxed whitespace-pre-line">
+                                {result.route.description.trim()}
+                              </p>
+                            </div>
+                          </div>
                         )}
                       </Card>
                     )}
@@ -616,9 +519,8 @@ export default function Landing() {
                     {origin || destination ? "Mga Tugmang Ruta" : "Mga Available na Ruta"}
                   </h3>
                   <p className="text-sm mt-1 text-slate-600">
-                   
-                    {VEHICLES.find((v) => v.type === selectedVehicle)?.label} — 
-                    {origin || destination ? " mga ruta base sa iyong search" : " lahat ng available na ruta"}
+                    {VEHICLES.find((v) => v.type === selectedVehicle)?.label} —{" "}
+                    {origin || destination ? "mga ruta base sa iyong search" : "lahat ng available na ruta"}
                   </p>
                 </div>
                 {!routesLoading && filteredRoutes.length > 0 && (
@@ -628,10 +530,12 @@ export default function Landing() {
                 )}
               </div>
 
+              {/* ── Skeleton grid replaces the old full-page spinner ── */}
               {routesLoading && (
-                <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-600">
-                  <Loader2 className="w-7 h-7 animate-spin text-[#1a3362]" />
-                  <p className="text-sm">Nilo-load ang mga ruta…</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <RouteCardSkeleton key={i} />
+                  ))}
                 </div>
               )}
 
@@ -650,6 +554,7 @@ export default function Landing() {
                 </div>
               )}
 
+              {/* ── Route Cards with description ── */}
               {!routesLoading && filteredRoutes.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredRoutes.map((route) => (
@@ -658,6 +563,7 @@ export default function Landing() {
                       onClick={() => handleRouteCardClick(route)}
                       className="border-[1.5px] border-slate-200 rounded-2xl p-4 cursor-pointer transition-all hover:border-amber-500 hover:shadow-[0_6px_20px_rgba(15,32,68,0.08)] hover:-translate-y-0.5"
                     >
+                      {/* Origin / Destination */}
                       <div className="flex items-start gap-3">
                         <div className="flex flex-col items-center pt-0.5 gap-1 shrink-0">
                           <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_0_3px_#d1fae5]" />
@@ -666,19 +572,17 @@ export default function Landing() {
                         </div>
                         <div className="flex flex-col gap-2 flex-1 min-w-0">
                           <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                              Mula
-                            </p>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Mula</p>
                             <p className="text-sm font-semibold truncate text-[#0f2044]">{route.origin}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                              Papunta
-                            </p>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Papunta</p>
                             <p className="text-sm font-semibold truncate text-[#0f2044]">{route.destination}</p>
                           </div>
                         </div>
                       </div>
+
+                      {/* Fare + distance */}
                       <div className="mt-4 pt-3 flex items-center justify-between border-t-[1.5px] border-slate-200">
                         {route.distance_km && (
                           <span className="text-xs text-slate-600">{route.distance_km} km</span>
@@ -687,6 +591,18 @@ export default function Landing() {
                           ₱{route.fare?.toFixed(2)}
                         </span>
                       </div>
+
+                      {/* ── Description (clamped to 3 lines on card) ── */}
+                      {route.description && (
+                        <div className="mt-3 pt-3 border-t-[1.5px] border-slate-100">
+                          <div className="flex items-start gap-2">
+                            <Info className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                            <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 whitespace-pre-line">
+                              {route.description.trim()}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </Card>
                   ))}
                 </div>
@@ -695,7 +611,6 @@ export default function Landing() {
           </section>
         )}
 
-        
         <section className="py-14 border-t bg-slate-50">
           <div className="container mx-auto px-6 text-center max-w-[560px]">
             <div className="flex justify-center">
