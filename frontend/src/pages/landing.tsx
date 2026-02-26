@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Calculator, ArrowRight, Loader2, Navigation, X, Info } from "lucide-react"
+import { MapPin, Calculator, ArrowRight, Loader2, Navigation, X, Info, ChevronDown, ChevronUp } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import axios from "axios"
@@ -21,7 +21,7 @@ interface Route {
   fare: number
   distance_km: number
   vehicle_type: string
-  description?: string  // ← added
+  description?: string
 }
 
 interface FareResult {
@@ -30,12 +30,16 @@ interface FareResult {
   breakdown?: string
 }
 
+// --- Constants ---
+const ROUTES_PER_PAGE = 6
+const DESCRIPTION_CHAR_LIMIT = 120
+
 // --- Vehicle Config ---
 const VEHICLES: { type: VehicleType; label: string; icon: string; desc: string }[] = [
   { type: "jeep", label: "Jeepney", icon: JeepIcon, desc: "Pinaka-popular" },
   { type: "bus", label: "Bus", icon: BusIcon, desc: "Pangmahabang biyahe" },
   { type: "tricycle", label: "Tricycle", icon: TricycleIcon, desc: "Pang-lokal" },
-];
+]
 
 // --- Carousel Images ---
 const CAROUSEL_IMAGES = [
@@ -45,10 +49,9 @@ const CAROUSEL_IMAGES = [
   "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fcalamba.7cc2e2ee.jpg&w=640&q=75",
 ]
 
-// API Base URL
 const API_BASE_URL = "https://lagona-oz9x.vercel.app"
 
-// --- Skeleton Card (replaces spinner for route grid) ---
+// --- Skeleton Card ---
 function RouteCardSkeleton() {
   return (
     <div className="border-[1.5px] border-slate-100 rounded-2xl p-4 animate-pulse">
@@ -82,6 +85,42 @@ function RouteCardSkeleton() {
   )
 }
 
+// --- Description with See More / See Less ---
+function RouteDescription({ description, darkMode = false }: { description: string; darkMode?: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+  const trimmed = description.trim()
+  const isLong = trimmed.length > DESCRIPTION_CHAR_LIMIT
+  const displayText = isLong && !expanded ? trimmed.slice(0, DESCRIPTION_CHAR_LIMIT) + "…" : trimmed
+
+  const textClass = darkMode ? "text-white/60" : "text-slate-500"
+  const btnClass = darkMode
+    ? "text-amber-400 hover:text-amber-300"
+    : "text-amber-600 hover:text-amber-700"
+  const iconClass = darkMode ? "text-amber-400" : "text-amber-500"
+
+  return (
+    <div className="flex items-start gap-2">
+      <Info className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${iconClass}`} />
+      <div>
+        <p className={`text-xs leading-relaxed whitespace-pre-line ${textClass}`}>
+          {displayText}
+        </p>
+        {isLong && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+            className={`flex items-center gap-0.5 mt-1 text-[10px] font-semibold transition-colors ${btnClass}`}
+          >
+            {expanded
+              ? <><ChevronUp className="w-3 h-3" />See less</>
+              : <><ChevronDown className="w-3 h-3" />See more</>
+            }
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Landing() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null)
   const [origin, setOrigin] = useState("")
@@ -93,8 +132,8 @@ export default function Landing() {
   const [routesLoading, setRoutesLoading] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [filteredRoutes, setFilteredRoutes] = useState<Route[]>([])
+  const [visibleCount, setVisibleCount] = useState(ROUTES_PER_PAGE)
 
-  // Suggestions state
   const [originSuggestions, setOriginSuggestions] = useState<string[]>([])
   const [destSuggestions, setDestSuggestions] = useState<string[]>([])
   const [showOriginSuggestions, setShowOriginSuggestions] = useState(false)
@@ -102,11 +141,13 @@ export default function Landing() {
   const [originFocusIndex, setOriginFocusIndex] = useState(-1)
   const [destFocusIndex, setDestFocusIndex] = useState(-1)
 
-  // Refs for click outside
   const originRef = useRef<HTMLDivElement>(null)
   const destRef = useRef<HTMLDivElement>(null)
+  const routesSectionRef = useRef<HTMLDivElement>(null)
 
-  // Carousel auto-scroll
+  // Reset visible count when filters change
+  useEffect(() => { setVisibleCount(ROUTES_PER_PAGE) }, [filteredRoutes])
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % CAROUSEL_IMAGES.length)
@@ -114,15 +155,10 @@ export default function Landing() {
     return () => clearInterval(interval)
   }, [])
 
-  // Click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (originRef.current && !originRef.current.contains(event.target as Node)) {
-        setShowOriginSuggestions(false)
-      }
-      if (destRef.current && !destRef.current.contains(event.target as Node)) {
-        setShowDestSuggestions(false)
-      }
+      if (originRef.current && !originRef.current.contains(event.target as Node)) setShowOriginSuggestions(false)
+      if (destRef.current && !destRef.current.contains(event.target as Node)) setShowDestSuggestions(false)
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
@@ -132,11 +168,11 @@ export default function Landing() {
   const allDestinations = [...new Set(routes.map((r) => r.destination))].sort()
 
   useEffect(() => {
-    if (origin.trim() && routes.length > 0) {
-      setOriginSuggestions(allOrigins.filter((o) => o.toLowerCase().includes(origin.toLowerCase())))
-    } else {
-      setOriginSuggestions(allOrigins)
-    }
+    setOriginSuggestions(
+      origin.trim() && routes.length > 0
+        ? allOrigins.filter((o) => o.toLowerCase().includes(origin.toLowerCase()))
+        : allOrigins
+    )
     setOriginFocusIndex(-1)
   }, [origin, routes])
 
@@ -144,8 +180,9 @@ export default function Landing() {
     if (routes.length > 0) {
       let availableDests = allDestinations
       if (origin.trim()) {
-        const routesFromOrigin = routes.filter((r) => r.origin.toLowerCase() === origin.toLowerCase())
-        availableDests = [...new Set(routesFromOrigin.map((r) => r.destination))].sort()
+        availableDests = [...new Set(
+          routes.filter((r) => r.origin.toLowerCase() === origin.toLowerCase()).map((r) => r.destination)
+        )].sort()
       }
       setDestSuggestions(
         destination.trim()
@@ -157,43 +194,24 @@ export default function Landing() {
   }, [destination, origin, routes])
 
   useEffect(() => {
-    if (!selectedVehicle || routes.length === 0) {
-      setFilteredRoutes([])
-      return
-    }
-    const originLower = origin.toLowerCase().trim()
-    const destLower = destination.toLowerCase().trim()
-    if (!originLower && !destLower) {
-      setFilteredRoutes(routes)
-      return
-    }
-    setFilteredRoutes(
-      routes.filter((route) => {
-        const matchOrigin = !originLower || route.origin.toLowerCase().includes(originLower)
-        const matchDest = !destLower || route.destination.toLowerCase().includes(destLower)
-        return matchOrigin && matchDest
-      })
-    )
+    if (!selectedVehicle || routes.length === 0) { setFilteredRoutes([]); return }
+    const ol = origin.toLowerCase().trim()
+    const dl = destination.toLowerCase().trim()
+    if (!ol && !dl) { setFilteredRoutes(routes); return }
+    setFilteredRoutes(routes.filter((r) => (!ol || r.origin.toLowerCase().includes(ol)) && (!dl || r.destination.toLowerCase().includes(dl))))
   }, [origin, destination, routes, selectedVehicle])
 
   const handleVehicleSelect = async (vehicle: VehicleType) => {
     setSelectedVehicle(vehicle)
-    setResult(null)
-    setError(null)
-    setOrigin("")
-    setDestination("")
-    setRoutes([])
-    setFilteredRoutes([])
-    setRoutesLoading(true)
+    setResult(null); setError(null); setOrigin(""); setDestination("")
+    setRoutes([]); setFilteredRoutes([]); setRoutesLoading(true)
     try {
       const res = await axios.get(`${API_BASE_URL}/api/routes`)
-      const filtered = (res.data || []).filter((route: Route) => route.vehicle_type === vehicle)
-      setRoutes(filtered)
-      setFilteredRoutes(filtered)
+      const filtered = (res.data || []).filter((r: Route) => r.vehicle_type === vehicle)
+      setRoutes(filtered); setFilteredRoutes(filtered)
     } catch (err) {
       console.error("Error fetching routes:", err)
-      setRoutes([])
-      setFilteredRoutes([])
+      setRoutes([]); setFilteredRoutes([])
     } finally {
       setRoutesLoading(false)
     }
@@ -201,21 +219,14 @@ export default function Landing() {
 
   const handleCalculate = async () => {
     if (!selectedVehicle || !origin.trim() || !destination.trim()) return
-    setLoading(true)
-    setResult(null)
-    setError(null)
+    setLoading(true); setResult(null); setError(null)
     try {
-      const matchingRoute = routes.find(
-        (route) =>
-          route.origin.toLowerCase() === origin.trim().toLowerCase() &&
-          route.destination.toLowerCase() === destination.trim().toLowerCase()
+      const match = routes.find(
+        (r) => r.origin.toLowerCase() === origin.trim().toLowerCase() &&
+               r.destination.toLowerCase() === destination.trim().toLowerCase()
       )
-      if (matchingRoute) {
-        setResult({
-          route: matchingRoute,
-          fare: matchingRoute.fare,
-          breakdown: `${matchingRoute.vehicle_type} • ${matchingRoute.distance_km} km`,
-        })
+      if (match) {
+        setResult({ route: match, fare: match.fare, breakdown: `${match.vehicle_type} • ${match.distance_km} km` })
       } else {
         setError("Hindi mahanap ang eksaktong ruta. Mangyaring pumili mula sa available na mga ruta sa ibaba.")
       }
@@ -227,15 +238,14 @@ export default function Landing() {
   }
 
   const handleRouteCardClick = (route: Route) => {
-    setOrigin(route.origin)
-    setDestination(route.destination)
+    setOrigin(route.origin); setDestination(route.destination)
     setResult({ route, fare: route.fare, breakdown: `${route.vehicle_type} • ${route.distance_km} km` })
     setError(null)
     document.getElementById("fareForm")?.scrollIntoView({ behavior: "smooth", block: "center" })
   }
 
   const handleOriginKeyDown = (e: React.KeyboardEvent) => {
-    if (!showOriginSuggestions || originSuggestions.length === 0) return
+    if (!showOriginSuggestions || !originSuggestions.length) return
     if (e.key === "ArrowDown") { e.preventDefault(); setOriginFocusIndex((p) => Math.min(p + 1, originSuggestions.length - 1)) }
     else if (e.key === "ArrowUp") { e.preventDefault(); setOriginFocusIndex((p) => Math.max(p - 1, -1)) }
     else if (e.key === "Enter" && originFocusIndex >= 0) { e.preventDefault(); setOrigin(originSuggestions[originFocusIndex]); setShowOriginSuggestions(false) }
@@ -243,7 +253,7 @@ export default function Landing() {
   }
 
   const handleDestKeyDown = (e: React.KeyboardEvent) => {
-    if (!showDestSuggestions || destSuggestions.length === 0) return
+    if (!showDestSuggestions || !destSuggestions.length) return
     if (e.key === "ArrowDown") { e.preventDefault(); setDestFocusIndex((p) => Math.min(p + 1, destSuggestions.length - 1)) }
     else if (e.key === "ArrowUp") { e.preventDefault(); setDestFocusIndex((p) => Math.max(p - 1, -1)) }
     else if (e.key === "Enter" && destFocusIndex >= 0) { e.preventDefault(); setDestination(destSuggestions[destFocusIndex]); setShowDestSuggestions(false) }
@@ -251,6 +261,9 @@ export default function Landing() {
   }
 
   const canCalculate = !!selectedVehicle && origin.trim().length > 0 && destination.trim().length > 0
+  const visibleRoutes = filteredRoutes.slice(0, visibleCount)
+  const hasMore = visibleCount < filteredRoutes.length
+  const remaining = filteredRoutes.length - visibleCount
 
   return (
     <div className="min-h-screen w-full bg-slate-50">
@@ -263,7 +276,7 @@ export default function Landing() {
       <div className="font-body">
         <Navbar />
 
-        {/* Hero Section */}
+        {/* Hero */}
         <section className="relative bg-gradient-to-br from-[#0a1a38] via-[#0f2044] to-[#1a3362] overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_50%,rgba(245,158,11,0.10)_0%,transparent_70%),radial-gradient(ellipse_40%_50%_at_5%_90%,rgba(255,255,255,0.03)_0%,transparent_60%)] pointer-events-none" />
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[length:48px_48px] pointer-events-none" />
@@ -287,11 +300,7 @@ export default function Landing() {
                   Para sa mga commuter at pasahero ng terminal
                 </div>
                 <div className="grid grid-cols-3 gap-3 max-w-[280px]">
-                  {[
-                    { label: "Sasakyan", value: "3" },
-                    { label: "Ruta", value: routes.length.toString() || "0" },
-                    { label: "Bayan", value: "12" },
-                  ].map((s) => (
+                  {[{ label: "Sasakyan", value: "3" }, { label: "Ruta", value: routes.length.toString() || "0" }, { label: "Bayan", value: "12" }].map((s) => (
                     <div key={s.label} className="bg-white/[0.07] border border-white/10 rounded-xl p-3.5 text-center backdrop-blur-sm">
                       <div className="font-display text-xl font-bold text-amber-500">{s.value}</div>
                       <div className="text-xs mt-0.5 text-white/50">{s.label}</div>
@@ -327,7 +336,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Fare Computation Section */}
+        {/* Fare Computation */}
         <section className="container mx-auto px-6 py-10" id="fareForm">
           <Card className="max-w-4xl mx-auto rounded-3xl shadow-[0_24px_64px_rgba(15,32,68,0.13),0_4px_16px_rgba(15,32,68,0.06)] border-0 overflow-hidden">
             <div className="bg-gradient-to-r from-[#0f2044] via-[#1e3d6e] to-[#1d4fad] px-7 py-4.5 flex items-center gap-3">
@@ -341,22 +350,15 @@ export default function Landing() {
             </div>
 
             <CardContent className="p-7 md:p-10 grid md:grid-cols-2 gap-8">
-              {/* Left — Vehicle Selection */}
+              {/* Vehicle Selection */}
               <div>
                 <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
                 <h2 className="font-display font-bold text-lg mb-1 text-[#0f2044]">Piliin ang Sasakyan</h2>
                 <p className="text-sm mb-5 text-slate-600">Anong sasakyan ang iyong sasakay?</p>
                 <div className="grid grid-cols-3 gap-3">
                   {VEHICLES.map((v) => (
-                    <button
-                      key={v.type}
-                      onClick={() => handleVehicleSelect(v.type)}
-                      className={`cursor-pointer flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 transition-all ${
-                        selectedVehicle === v.type
-                          ? "border-amber-500 bg-amber-50 shadow-[0_6px_18px_rgba(245,158,11,0.20)] -translate-y-0.5"
-                          : "border-slate-200 bg-slate-50 hover:border-[#1a3362] hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,32,68,0.09)]"
-                      }`}
-                    >
+                    <button key={v.type} onClick={() => handleVehicleSelect(v.type)}
+                      className={`cursor-pointer flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 transition-all ${selectedVehicle === v.type ? "border-amber-500 bg-amber-50 shadow-[0_6px_18px_rgba(245,158,11,0.20)] -translate-y-0.5" : "border-slate-200 bg-slate-50 hover:border-[#1a3362] hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,32,68,0.09)]"}`}>
                       <img src={v.icon} alt={v.label} className="h-8 w-8" />
                       <span className={`font-display text-xs font-semibold ${selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"}`}>{v.label}</span>
                       <span className="text-[10px] text-slate-600">{v.desc}</span>
@@ -365,7 +367,7 @@ export default function Landing() {
                 </div>
               </div>
 
-              {/* Right — Route Input */}
+              {/* Route Input */}
               <div>
                 <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
                 <h2 className="font-display font-bold text-lg mb-1 text-[#0f2044]">Ilagay ang Ruta</h2>
@@ -388,27 +390,15 @@ export default function Landing() {
                     {/* Origin */}
                     <div className="relative" ref={originRef}>
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500 z-10" />
-                      <input
-                        value={origin}
-                        onChange={(e) => setOrigin(e.target.value)}
-                        onFocus={() => setShowOriginSuggestions(true)}
-                        onKeyDown={handleOriginKeyDown}
-                        placeholder="Pinanggalingan"
-                        className="w-full pl-10 pr-9 py-3 rounded-xl border-[1.5px] border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none focus:border-[#1a3362] focus:bg-white focus:ring-[3px] focus:ring-[#1a3362]/[0.08]"
-                        autoComplete="off"
-                      />
-                      {origin && (
-                        <button onClick={() => { setOrigin(""); setShowOriginSuggestions(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10">
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
+                      <input value={origin} onChange={(e) => setOrigin(e.target.value)} onFocus={() => setShowOriginSuggestions(true)} onKeyDown={handleOriginKeyDown} placeholder="Pinanggalingan"
+                        className="w-full pl-10 pr-9 py-3 rounded-xl border-[1.5px] border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none focus:border-[#1a3362] focus:bg-white focus:ring-[3px] focus:ring-[#1a3362]/[0.08]" autoComplete="off" />
+                      {origin && <button onClick={() => { setOrigin(""); setShowOriginSuggestions(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"><X className="w-4 h-4" /></button>}
                       {showOriginSuggestions && originSuggestions.length > 0 && (
                         <div className="absolute top-full left-0 right-0 mt-1 bg-white border-[1.5px] border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
-                          {originSuggestions.map((suggestion, idx) => (
-                            <button key={suggestion} onClick={() => { setOrigin(suggestion); setShowOriginSuggestions(false) }}
+                          {originSuggestions.map((s, idx) => (
+                            <button key={s} onClick={() => { setOrigin(s); setShowOriginSuggestions(false) }}
                               className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${idx === originFocusIndex ? "bg-slate-50" : ""} ${idx === 0 ? "rounded-t-xl" : ""} ${idx === originSuggestions.length - 1 ? "rounded-b-xl" : ""}`}>
-                              <MapPin className="w-3.5 h-3.5 text-green-500 shrink-0" />
-                              <span className="text-slate-900">{suggestion}</span>
+                              <MapPin className="w-3.5 h-3.5 text-green-500 shrink-0" /><span className="text-slate-900">{s}</span>
                             </button>
                           ))}
                         </div>
@@ -424,52 +414,31 @@ export default function Landing() {
                     {/* Destination */}
                     <div className="relative" ref={destRef}>
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500 z-10" />
-                      <input
-                        value={destination}
-                        onChange={(e) => setDestination(e.target.value)}
-                        onFocus={() => setShowDestSuggestions(true)}
-                        onKeyDown={handleDestKeyDown}
-                        placeholder="Patutunguhan"
-                        className="w-full pl-10 pr-9 py-3 rounded-xl border-[1.5px] border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none focus:border-[#1a3362] focus:bg-white focus:ring-[3px] focus:ring-[#1a3362]/[0.08]"
-                        autoComplete="off"
-                      />
-                      {destination && (
-                        <button onClick={() => { setDestination(""); setShowDestSuggestions(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10">
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
+                      <input value={destination} onChange={(e) => setDestination(e.target.value)} onFocus={() => setShowDestSuggestions(true)} onKeyDown={handleDestKeyDown} placeholder="Patutunguhan"
+                        className="w-full pl-10 pr-9 py-3 rounded-xl border-[1.5px] border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none focus:border-[#1a3362] focus:bg-white focus:ring-[3px] focus:ring-[#1a3362]/[0.08]" autoComplete="off" />
+                      {destination && <button onClick={() => { setDestination(""); setShowDestSuggestions(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"><X className="w-4 h-4" /></button>}
                       {showDestSuggestions && destSuggestions.length > 0 && (
                         <div className="absolute top-full left-0 right-0 mt-1 bg-white border-[1.5px] border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
-                          {destSuggestions.map((suggestion, idx) => (
-                            <button key={suggestion} onClick={() => { setDestination(suggestion); setShowDestSuggestions(false) }}
+                          {destSuggestions.map((s, idx) => (
+                            <button key={s} onClick={() => { setDestination(s); setShowDestSuggestions(false) }}
                               className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${idx === destFocusIndex ? "bg-slate-50" : ""} ${idx === 0 ? "rounded-t-xl" : ""} ${idx === destSuggestions.length - 1 ? "rounded-b-xl" : ""}`}>
-                              <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                              <span className="text-slate-900">{suggestion}</span>
+                              <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" /><span className="text-slate-900">{s}</span>
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
 
-                    <Button
-                      onClick={handleCalculate}
-                      disabled={!canCalculate || loading}
-                      className="w-full h-12 rounded-xl bg-gradient-to-br from-[#0f2044] to-[#1e3d6e] text-white font-semibold text-sm shadow-[0_4px_14px_rgba(15,32,68,0.22)] hover:shadow-[0_8px_22px_rgba(15,32,68,0.28)] hover:-translate-y-0.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {loading ? (
-                        <><Loader2 className="w-4 h-4 animate-spin mr-2" />Kinukuha ang pamasahe…</>
-                      ) : (
-                        <><Calculator className="w-4 h-4 mr-2" />Kalkulahin ang Pamasahe</>
-                      )}
+                    <Button onClick={handleCalculate} disabled={!canCalculate || loading}
+                      className="w-full h-12 rounded-xl bg-gradient-to-br from-[#0f2044] to-[#1e3d6e] text-white font-semibold text-sm shadow-[0_4px_14px_rgba(15,32,68,0.22)] hover:shadow-[0_8px_22px_rgba(15,32,68,0.28)] hover:-translate-y-0.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                      {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Kinukuha ang pamasahe…</> : <><Calculator className="w-4 h-4 mr-2" />Kalkulahin ang Pamasahe</>}
                     </Button>
 
                     {error && (
-                      <div className="text-sm rounded-xl px-4 py-3 text-center bg-red-50 border-[1.5px] border-red-200 text-red-500 animate-in fade-in">
-                        {error}
-                      </div>
+                      <div className="text-sm rounded-xl px-4 py-3 text-center bg-red-50 border-[1.5px] border-red-200 text-red-500 animate-in fade-in">{error}</div>
                     )}
 
-                    {/* ── Result Card with description ── */}
+                    {/* Result Card */}
                     {result && (
                       <Card className="bg-gradient-to-br from-[#0f2044] to-[#1e3d6e] border-0 rounded-2xl p-5 shadow-[0_8px_28px_rgba(15,32,68,0.22)] animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="text-center">
@@ -480,23 +449,12 @@ export default function Landing() {
                             <ArrowRight className="w-3 h-3 text-white/35" />
                             <span>{result.route?.destination}</span>
                           </div>
-                          {result.route?.distance_km && (
-                            <p className="text-xs text-white/40">{result.route.distance_km} km</p>
-                          )}
-                          {result.breakdown && (
-                            <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">{result.breakdown}</p>
-                          )}
+                          {result.route?.distance_km && <p className="text-xs text-white/40">{result.route.distance_km} km</p>}
+                          {result.breakdown && <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">{result.breakdown}</p>}
                         </div>
-
-                        {/* Description in result card */}
                         {result.route?.description && (
                           <div className="mt-4 pt-4 border-t border-white/10">
-                            <div className="flex items-start gap-2">
-                              <Info className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
-                              <p className="text-xs text-white/60 leading-relaxed whitespace-pre-line">
-                                {result.route.description.trim()}
-                              </p>
-                            </div>
+                            <RouteDescription description={result.route.description} darkMode />
                           </div>
                         )}
                       </Card>
@@ -508,9 +466,9 @@ export default function Landing() {
           </Card>
         </section>
 
-        {/* Available Routes Section */}
+        {/* Available Routes */}
         {selectedVehicle && (
-          <section className="py-12 border-t bg-white">
+          <section className="py-12 border-t bg-white" ref={routesSectionRef}>
             <div className="container mx-auto px-6">
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
                 <div>
@@ -530,12 +488,10 @@ export default function Landing() {
                 )}
               </div>
 
-              {/* ── Skeleton grid replaces the old full-page spinner ── */}
+              {/* Skeleton */}
               {routesLoading && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <RouteCardSkeleton key={i} />
-                  ))}
+                  {Array.from({ length: ROUTES_PER_PAGE }).map((_, i) => <RouteCardSkeleton key={i} />)}
                 </div>
               )}
 
@@ -554,58 +510,86 @@ export default function Landing() {
                 </div>
               )}
 
-              {/* ── Route Cards with description ── */}
+              {/* Route Cards */}
               {!routesLoading && filteredRoutes.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredRoutes.map((route) => (
-                    <Card
-                      key={route.id}
-                      onClick={() => handleRouteCardClick(route)}
-                      className="border-[1.5px] border-slate-200 rounded-2xl p-4 cursor-pointer transition-all hover:border-amber-500 hover:shadow-[0_6px_20px_rgba(15,32,68,0.08)] hover:-translate-y-0.5"
-                    >
-                      {/* Origin / Destination */}
-                      <div className="flex items-start gap-3">
-                        <div className="flex flex-col items-center pt-0.5 gap-1 shrink-0">
-                          <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_0_3px_#d1fae5]" />
-                          <div className="w-px h-6 bg-slate-200" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_0_3px_#fee2e2]" />
-                        </div>
-                        <div className="flex flex-col gap-2 flex-1 min-w-0">
-                          <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Mula</p>
-                            <p className="text-sm font-semibold truncate text-[#0f2044]">{route.origin}</p>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {visibleRoutes.map((route) => (
+                      <Card key={route.id} onClick={() => handleRouteCardClick(route)}
+                        className="border-[1.5px] border-slate-200 rounded-2xl p-4 cursor-pointer transition-all hover:border-amber-500 hover:shadow-[0_6px_20px_rgba(15,32,68,0.08)] hover:-translate-y-0.5">
+                        <div className="flex items-start gap-3">
+                          <div className="flex flex-col items-center pt-0.5 gap-1 shrink-0">
+                            <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_0_3px_#d1fae5]" />
+                            <div className="w-px h-6 bg-slate-200" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_0_3px_#fee2e2]" />
                           </div>
-                          <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Papunta</p>
-                            <p className="text-sm font-semibold truncate text-[#0f2044]">{route.destination}</p>
+                          <div className="flex flex-col gap-2 flex-1 min-w-0">
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Mula</p>
+                              <p className="text-sm font-semibold truncate text-[#0f2044]">{route.origin}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Papunta</p>
+                              <p className="text-sm font-semibold truncate text-[#0f2044]">{route.destination}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Fare + distance */}
-                      <div className="mt-4 pt-3 flex items-center justify-between border-t-[1.5px] border-slate-200">
-                        {route.distance_km && (
-                          <span className="text-xs text-slate-600">{route.distance_km} km</span>
+                        <div className="mt-4 pt-3 flex items-center justify-between border-t-[1.5px] border-slate-200">
+                          {route.distance_km && <span className="text-xs text-slate-600">{route.distance_km} km</span>}
+                          <span className="font-display font-bold text-base ml-auto text-[#0f2044]">₱{route.fare?.toFixed(2)}</span>
+                        </div>
+                        {route.description && (
+                          <div className="mt-3 pt-3 border-t-[1.5px] border-slate-100">
+                            <RouteDescription description={route.description} />
+                          </div>
                         )}
-                        <span className="font-display font-bold text-base ml-auto text-[#0f2044]">
-                          ₱{route.fare?.toFixed(2)}
-                        </span>
-                      </div>
+                      </Card>
+                    ))}
+                  </div>
 
-                      {/* ── Description (clamped to 3 lines on card) ── */}
-                      {route.description && (
-                        <div className="mt-3 pt-3 border-t-[1.5px] border-slate-100">
-                          <div className="flex items-start gap-2">
-                            <Info className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
-                            <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 whitespace-pre-line">
-                              {route.description.trim()}
-                            </p>
-                          </div>
-                        </div>
+                  {/* Pagination controls */}
+                  <div className="flex flex-col items-center mt-8 gap-3">
+                    {/* Progress indicator */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-1.5 w-32 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min((visibleCount / filteredRoutes.length) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {Math.min(visibleCount, filteredRoutes.length)} / {filteredRoutes.length}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* View More */}
+                      {hasMore && (
+                        <button
+                          onClick={() => setVisibleCount((prev) => prev + ROUTES_PER_PAGE)}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-[1.5px] border-[#1a3362] text-[#1a3362] text-sm font-semibold hover:bg-[#1a3362] hover:text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_14px_rgba(15,32,68,0.18)]"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                          View {Math.min(remaining, ROUTES_PER_PAGE)} more result{Math.min(remaining, ROUTES_PER_PAGE) !== 1 ? "s" : ""}
+                        </button>
                       )}
-                    </Card>
-                  ))}
-                </div>
+
+                      {/* Show Less — only after expanding */}
+                      {visibleCount > ROUTES_PER_PAGE && (
+                        <button
+                          onClick={() => {
+                            setVisibleCount(ROUTES_PER_PAGE)
+                            routesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                          }}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-[1.5px] border-slate-200 text-slate-500 text-sm font-semibold hover:border-slate-300 hover:text-slate-700 transition-all"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                          Show less
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </section>
