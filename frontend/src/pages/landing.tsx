@@ -31,7 +31,7 @@ interface FareResult {
 }
 
 // --- Constants ---
-const ROUTES_PER_PAGE = 6
+const ROUTES_PER_PAGE = 3
 const DESCRIPTION_CHAR_LIMIT = 120
 
 // --- Vehicle Config ---
