@@ -299,14 +299,14 @@ export default function Landing() {
                   <Navigation className="w-4 h-4" />
                   Para sa mga commuter at pasahero ng terminal
                 </div>
-                {/* <div className="grid grid-cols-3 gap-3 max-w-[280px]">
-                  {[{ label: "Sasakyan", value: "3" }, { label: "Ruta", value: routes.length.toString() || "0" }, { label: "Bayan", value: "12" }].map((s) => (
+                <div className="grid grid-cols-3 gap-3 max-w-[280px]">
+                  {[{ label: "Sasakyan", value: "3" }, { label: "Ruta", value: routes.length.toString() || "0" }].map((s) => (
                     <div key={s.label} className="bg-white/[0.07] border border-white/10 rounded-xl p-3.5 text-center backdrop-blur-sm">
                       <div className="font-display text-xl font-bold text-amber-500">{s.value}</div>
                       <div className="text-xs mt-0.5 text-white/50">{s.label}</div>
                     </div>
                   ))}
-                </div> */}
+                </div>
               </div>
 
               <div className="hidden md:block h-[500px]">
