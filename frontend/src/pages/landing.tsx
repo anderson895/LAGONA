@@ -446,7 +446,7 @@ export default function Landing() {
                             <ArrowRight className="w-3 h-3 text-white/35" />
                             <span>{result.route?.destination}</span>
                           </div>
-                          {result.route?.distance_km && <p className="text-xs text-white/40">{result.route.distance_km} km</p>}
+                          
                           {result.breakdown && <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">{result.breakdown}</p>}
                         </div>
                         {result.route?.description && (
