@@ -4,7 +4,6 @@ import Footer from "@/components/Footer";
 
 const VEHICLES = [
   { type: "jeep", label: "Jeepney", emoji: "🚐" },
-  { type: "bus", label: "Bus", emoji: "🚌" },
   { type: "tricycle", label: "Tricycle", emoji: "🛺" },
 ];
 
@@ -36,9 +35,7 @@ export default function About() {
               Layunin ng Sistema
             </h2>
             <p className="text-slate-600 leading-relaxed">
-              Layunin naming magbigay ng malinaw at opisyal na impormasyon hinggil
-              sa pamasahe ng mga pasahero. Pinapadali nito ang pagpaplano ng
-              biyahe at matitiyak ang wastong singil batay sa distansya at ruta.
+              Ang goal ng system na ito ay magbigay ng malinaw at reliable na impormasyon tungkol sa pamasahe ng mga commuters. Pinapadali nito ang trip planning at sinisigurado na ang fares ay base sa rates na nakuha mula sa active jeepney at tricycle drivers at sa terminals.
             </p>
           </div>
 
@@ -48,9 +45,7 @@ export default function About() {
               Para sa mga Commuter
             </h2>
             <p className="text-slate-600 leading-relaxed">
-              Ang sistemang ito ay para sa lahat ng mga pasahero at commuter na
-              nais magkaroon ng mabilis at tumpak na impormasyon tungkol sa pamasahe
-              at mga ruta sa kanilang pagbiyahe.
+              Ang system na ito ay para sa mga commuters na taga-San Pedro, Santa Rosa, at Biñan na gustong magkaroon ng mabilis, accurate, at reliable na impormasyon tungkol sa pamasahe at mga ruta ng kanilang biyahe.
             </p>
           </div>
 
@@ -82,13 +77,13 @@ export default function About() {
             Pangunahing Impormasyon
           </h2>
           <p className="text-slate-600 leading-relaxed mb-4">
-            Ang sistemang ito ay ginawa bilang bahagi ng proyektong pang-komunidad
-            upang suportahan ang mga lokal na pasahero at commuter. Gumagamit kami
-            ng opisyal na datos upang matiyak ang tama at patas na pamasahe.
+            Ang system na ito ay ginawa bilang bahagi ng isang community-based project para suportahan ang mga local commuters.
+          </p>
+          <p className="text-slate-600 leading-relaxed mb-4">
+            Ang fare at route information ay directly gathered mula sa mga jeepney at tricycle drivers, pati na rin sa mga terminal sa mga nasabing lugar. Dahil dito, mas nasisigurado namin na ang data na nasa system ay updated, accurate, at based sa actual na sinisingil.
           </p>
           <p className="text-slate-600 leading-relaxed">
-            Maaaring gamitin ang sistema sa mga pangunahing terminal at bayan upang
-            mabilis malaman ang mga ruta at presyo ng pamasahe.
+            Maaaring gamitin ang system sa mga pangunahing terminal at bayan para mabilis na malaman ang information ng routes at estimated fare
           </p>
         </div>
       </section>

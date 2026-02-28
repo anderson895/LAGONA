@@ -36,8 +36,7 @@ const DESCRIPTION_CHAR_LIMIT = 120
 
 // --- Vehicle Config ---
 const VEHICLES: { type: VehicleType; label: string; icon: string; desc: string }[] = [
-  { type: "jeep", label: "Jeepney", icon: JeepIcon, desc: "Pinaka-popular" },
-  { type: "bus", label: "Bus", icon: BusIcon, desc: "Pangmahabang biyahe" },
+  { type: "jeep", label: "Jeepney", icon: JeepIcon, desc: "Pinaka-popular" },// { type: "bus", label: "Bus", icon: BusIcon, desc: "Pangmahabang biyahe" },
   { type: "tricycle", label: "Tricycle", icon: TricycleIcon, desc: "Pang-lokal" },
 ]
 
@@ -300,7 +299,7 @@ export default function Landing() {
                   Para sa mga commuter at pasahero ng terminal
                 </div>
                 <div className="grid grid-cols-3 gap-3 max-w-[280px]">
-                  {[{ label: "Sasakyan", value: "3" }, { label: "Ruta", value: routes.length.toString() || "0" }].map((s) => (
+                  {[{ label: "Sasakyan", value: "2" }, { label: "Ruta", value: routes.length.toString() || "0" }].map((s) => (
                     <div key={s.label} className="bg-white/[0.07] border border-white/10 rounded-xl p-3.5 text-center backdrop-blur-sm">
                       <div className="font-display text-xl font-bold text-amber-500">{s.value}</div>
                       <div className="text-xs mt-0.5 text-white/50">{s.label}</div>

@@ -83,7 +83,6 @@ interface RouteFormData {
 
 const VEHICLE_TYPES = [
   { value: "jeep", label: "Jeepney", icon: JeepneyIcon },
-  { value: "bus", label: "Bus", icon: BusIcon },
   { value: "tricycle", label: "Tricycle", icon: TricycleIcon },
 ] as const;
  
