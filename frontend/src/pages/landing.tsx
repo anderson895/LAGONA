@@ -8,7 +8,6 @@ import Footer from "@/components/Footer"
 import axios from "axios"
 
 import JeepIcon from "@/components/icons/jeepney.svg";
-import BusIcon from "@/components/icons/bus.svg";
 import TricycleIcon from "@/components/icons/tricycle.svg";
 
 // --- Types ---
