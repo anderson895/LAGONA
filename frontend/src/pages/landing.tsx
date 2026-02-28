@@ -41,10 +41,9 @@ const VEHICLES: { type: VehicleType; label: string; icon: string; desc: string }
 
 // --- Carousel Images ---
 const CAROUSEL_IMAGES = [
-  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fayala-malls.1aa92c67.jpg&w=640&q=75",
-  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fone-ayala.1706dcd3.jpg&w=640&q=75",
-  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fdalahican.44656faa.jpg&w=384&q=75",
-  "https://jacliner.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fcalamba.7cc2e2ee.jpg&w=640&q=75",
+  "https://res.cloudinary.com/dpquu9gd0/image/upload/v1772268407/IMG_6726_ohrnew.jpg",
+  "https://res.cloudinary.com/dpquu9gd0/image/upload/v1772268407/IMG_6727_xclviu.jpg",
+  "https://res.cloudinary.com/dpquu9gd0/image/upload/v1772268406/IMG_6728_igipcw.jpg",
 ]
 
 const API_BASE_URL = "https://lagona-oz9x.vercel.app"
@@ -447,7 +446,7 @@ export default function Landing() {
                             <ArrowRight className="w-3 h-3 text-white/35" />
                             <span>{result.route?.destination}</span>
                           </div>
-                          {result.route?.distance_km && <p className="text-xs text-white/40">{result.route.distance_km} km</p>}
+                          
                           {result.breakdown && <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">{result.breakdown}</p>}
                         </div>
                         {result.route?.description && (
