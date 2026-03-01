@@ -297,18 +297,18 @@ export default function Landing() {
               <div>
                 <Badge className="inline-flex items-center gap-1.5 bg-white/[0.08] border border-amber-500/35 text-amber-500 hover:bg-white/[0.12] font-display text-[10px] font-bold tracking-widest uppercase px-3.5 py-1 mb-5">
                   <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-                  Official Fare Inquiry System
+                  Localized Fare Inquiry System
                 </Badge>
                 <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight mb-5 text-white">
                   A Digital Guide
                   <span className="block mt-1 text-amber-500">for Provincial Commuters</span>
                 </h1>
                 <p className="text-base md:text-lg leading-relaxed mb-8 text-white/65 max-w-[420px]">
-                  Ibigay ang iyong pinanggalingan at patutunguhan upang malaman ang kaukulang pamasahe batay sa umiiral na rate.
+                  Ibigay ang iyong pinanggalingan at patutunguhan upang malaman ang tinatayang pamasahe batay sa nakalap na fare data mula sa mga driver.
                 </p>
                 <div className="flex items-center gap-2 text-sm mb-10 text-white/42">
                   <Navigation className="w-4 h-4" />
-                  Para sa mga commuter at pasahero ng terminal
+                  Para lamang sa mga commuter sa San Pedro, Biñan, at Santa Rosa.
                 </div>
                 <div className="grid grid-cols-3 gap-3 max-w-[280px]">
                   {[{ label: "Sasakyan", value: "3" }, { label: "Ruta", value: routes.length.toString() || "0" }].map((s) => (
@@ -356,7 +356,7 @@ export default function Landing() {
               </div>
               <div>
                 <p className="font-display font-semibold text-white text-[15px]">Fare Computation</p>
-                <p className="text-xs text-white/48">Pumili ng sasakyan at ilagay ang detalye ng biyahe</p>
+                <p className="text-xs text-white/48">Pumili ng sasakyan at ilagay ang biyahe upang makita ang available na ruta at fare</p>
               </div>
             </div>
 
@@ -365,7 +365,7 @@ export default function Landing() {
               <div>
                 <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
                 <h2 className="font-display font-bold text-lg mb-1 text-[#0f2044]">Piliin ang Sasakyan</h2>
-                <p className="text-sm mb-5 text-slate-600">Anong sasakyan ang iyong sasakay?</p>
+                <p className="text-sm mb-5 text-slate-600">Anong sasakyan ang gagamitin mo?</p>
                 <div className="grid grid-cols-3 gap-3">
                   {VEHICLES.map((v) => (
                     <button key={v.type} onClick={() => handleVehicleSelect(v.type)}
@@ -382,12 +382,12 @@ export default function Landing() {
               <div>
                 <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
                 <h2 className="font-display font-bold text-lg mb-1 text-[#0f2044]">Ilagay ang Ruta</h2>
-                <p className="text-sm mb-5 text-slate-600">Saan ka magmumula at pupunta?</p>
+                <p className="text-sm mb-5 text-slate-600">Saan ang iyong pinanggalingan at pupuntahan?</p>
 
                 {!selectedVehicle ? (
                   <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl bg-slate-50 border-[1.5px] border-dashed border-slate-200">
                     <span className="text-2xl">👆</span>
-                    <p className="text-sm text-slate-600">Pumili muna ng sasakyan</p>
+                    <p className="text-sm text-slate-600">Piliin muna ang sasakyan upang maglagay ng route</p>
                   </div>
                 ) : (
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -605,11 +605,17 @@ export default function Landing() {
             <div className="flex justify-center">
               <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
             </div>
-            <h3 className="font-display text-2xl font-bold mb-4 text-[#0f2044]">Layunin ng Sistema</h3>
+            <h3 className="font-display text-2xl font-bold mb-4 text-[#0f2044]">May kulang ba sa ruta?</h3>
             <p className="leading-relaxed text-sm md:text-base text-slate-600">
-              Ang sistemang ito ay idinisenyo upang magbigay ng malinaw at opisyal na impormasyon
-              hinggil sa pamasahe ng mga pasahero. Layunin nitong mapadali ang pagpaplano ng biyahe
-              at matiyak ang wastong singil batay sa distansya at ruta.
+              I-suggest dito ang mga ruta na hindi mo makita sa sistema:{" "}
+              <a
+                href="https://forms.gle/3iT6LzBAa77rfrCRA"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                https://forms.gle/3iT6LzBAa77rfrCRA
+              </a>
             </p>
           </div>
         </section>
