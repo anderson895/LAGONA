@@ -7,18 +7,17 @@ import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import axios from "axios"
 
-import JeepIcon from "@/components/icons/jeepney.svg";
-import TricycleIcon from "@/components/icons/tricycle.svg";
+import JeepIcon from "@/components/icons/jeepney.svg"
+import TricycleIcon from "@/components/icons/tricycle.svg"
 
 // --- Types ---
-type VehicleType = "jeep" | "bus" | "tricycle"
+type VehicleType = "jeep" | "tricycle" | "jeep_and_tricycle"
 
 interface Route {
   id: string
   origin: string
   destination: string
   fare: number
-  distance_km: number
   vehicle_type: string
   description?: string
 }
@@ -34,9 +33,10 @@ const ROUTES_PER_PAGE = 6
 const DESCRIPTION_CHAR_LIMIT = 120
 
 // --- Vehicle Config ---
-const VEHICLES: { type: VehicleType; label: string; icon: string; desc: string }[] = [
-  { type: "jeep", label: "Jeepney", icon: JeepIcon, desc: "Pinaka-popular" },// { type: "bus", label: "Bus", icon: BusIcon, desc: "Pangmahabang biyahe" },
+const VEHICLES: { type: VehicleType; label: string; icon: string | null; desc: string }[] = [
+  { type: "jeep", label: "Jeepney", icon: JeepIcon, desc: "Pinaka-popular" },
   { type: "tricycle", label: "Tricycle", icon: TricycleIcon, desc: "Pang-lokal" },
+  { type: "jeep_and_tricycle", label: "Jeep + Tricycle", icon: null, desc: "Kombinasyon" },
 ]
 
 // --- Carousel Images ---
@@ -70,8 +70,7 @@ function RouteCardSkeleton() {
         </div>
       </div>
       <div className="mt-4 pt-3 flex items-center justify-between border-t-[1.5px] border-slate-100">
-        <div className="h-3 w-10 bg-slate-200 rounded" />
-        <div className="h-5 w-14 bg-slate-200 rounded" />
+        <div className="h-5 w-14 bg-slate-200 rounded ml-auto" />
       </div>
       <div className="mt-3 pt-3 border-t-[1.5px] border-slate-100 space-y-1.5">
         <div className="h-2.5 w-full bg-slate-200 rounded" />
@@ -90,18 +89,14 @@ function RouteDescription({ description, darkMode = false }: { description: stri
   const displayText = isLong && !expanded ? trimmed.slice(0, DESCRIPTION_CHAR_LIMIT) + "…" : trimmed
 
   const textClass = darkMode ? "text-white/60" : "text-slate-500"
-  const btnClass = darkMode
-    ? "text-amber-400 hover:text-amber-300"
-    : "text-amber-600 hover:text-amber-700"
+  const btnClass = darkMode ? "text-amber-400 hover:text-amber-300" : "text-amber-600 hover:text-amber-700"
   const iconClass = darkMode ? "text-amber-400" : "text-amber-500"
 
   return (
     <div className="flex items-start gap-2">
       <Info className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${iconClass}`} />
       <div>
-        <p className={`text-xs leading-relaxed whitespace-pre-line ${textClass}`}>
-          {displayText}
-        </p>
+        <p className={`text-xs leading-relaxed whitespace-pre-line ${textClass}`}>{displayText}</p>
         {isLong && (
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
@@ -116,6 +111,21 @@ function RouteDescription({ description, darkMode = false }: { description: stri
       </div>
     </div>
   )
+}
+
+// --- Vehicle Icon display (handles dual icon for jeep_and_tricycle) ---
+function VehicleIcon({ type, className = "h-8 w-8" }: { type: VehicleType; className?: string }) {
+  if (type === "jeep_and_tricycle") {
+    return (
+      <div className="flex items-center gap-0.5">
+        <img src={JeepIcon} alt="jeep" className={className} />
+        <img src={TricycleIcon} alt="tricycle" className={className} />
+      </div>
+    )
+  }
+  const vehicle = VEHICLES.find(v => v.type === type)
+  if (!vehicle?.icon) return null
+  return <img src={vehicle.icon} alt={vehicle.label} className={className} />
 }
 
 export default function Landing() {
@@ -142,7 +152,6 @@ export default function Landing() {
   const destRef = useRef<HTMLDivElement>(null)
   const routesSectionRef = useRef<HTMLDivElement>(null)
 
-  // Reset visible count when filters change
   useEffect(() => { setVisibleCount(ROUTES_PER_PAGE) }, [filteredRoutes])
 
   useEffect(() => {
@@ -195,7 +204,10 @@ export default function Landing() {
     const ol = origin.toLowerCase().trim()
     const dl = destination.toLowerCase().trim()
     if (!ol && !dl) { setFilteredRoutes(routes); return }
-    setFilteredRoutes(routes.filter((r) => (!ol || r.origin.toLowerCase().includes(ol)) && (!dl || r.destination.toLowerCase().includes(dl))))
+    setFilteredRoutes(routes.filter((r) =>
+      (!ol || r.origin.toLowerCase().includes(ol)) &&
+      (!dl || r.destination.toLowerCase().includes(dl))
+    ))
   }, [origin, destination, routes, selectedVehicle])
 
   const handleVehicleSelect = async (vehicle: VehicleType) => {
@@ -223,7 +235,8 @@ export default function Landing() {
                r.destination.toLowerCase() === destination.trim().toLowerCase()
       )
       if (match) {
-        setResult({ route: match, fare: match.fare, breakdown: `${match.vehicle_type} • ${match.distance_km} km` })
+        const vehicleLabel = VEHICLES.find(v => v.type === match.vehicle_type)?.label || match.vehicle_type
+        setResult({ route: match, fare: match.fare, breakdown: vehicleLabel })
       } else {
         setError("Hindi mahanap ang eksaktong ruta. Mangyaring pumili mula sa available na mga ruta sa ibaba.")
       }
@@ -236,7 +249,8 @@ export default function Landing() {
 
   const handleRouteCardClick = (route: Route) => {
     setOrigin(route.origin); setDestination(route.destination)
-    setResult({ route, fare: route.fare, breakdown: `${route.vehicle_type} • ${route.distance_km} km` })
+    const vehicleLabel = VEHICLES.find(v => v.type === route.vehicle_type)?.label || route.vehicle_type
+    setResult({ route, fare: route.fare, breakdown: vehicleLabel })
     setError(null)
     document.getElementById("fareForm")?.scrollIntoView({ behavior: "smooth", block: "center" })
   }
@@ -297,7 +311,7 @@ export default function Landing() {
                   Para sa mga commuter at pasahero ng terminal
                 </div>
                 <div className="grid grid-cols-3 gap-3 max-w-[280px]">
-                  {[{ label: "Sasakyan", value: "2" }, { label: "Ruta", value: routes.length.toString() || "0" }].map((s) => (
+                  {[{ label: "Sasakyan", value: "3" }, { label: "Ruta", value: routes.length.toString() || "0" }].map((s) => (
                     <div key={s.label} className="bg-white/[0.07] border border-white/10 rounded-xl p-3.5 text-center backdrop-blur-sm">
                       <div className="font-display text-xl font-bold text-amber-500">{s.value}</div>
                       <div className="text-xs mt-0.5 text-white/50">{s.label}</div>
@@ -356,7 +370,7 @@ export default function Landing() {
                   {VEHICLES.map((v) => (
                     <button key={v.type} onClick={() => handleVehicleSelect(v.type)}
                       className={`cursor-pointer flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 transition-all ${selectedVehicle === v.type ? "border-amber-500 bg-amber-50 shadow-[0_6px_18px_rgba(245,158,11,0.20)] -translate-y-0.5" : "border-slate-200 bg-slate-50 hover:border-[#1a3362] hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,32,68,0.09)]"}`}>
-                      <img src={v.icon} alt={v.label} className="h-8 w-8" />
+                      <VehicleIcon type={v.type} className="h-8 w-8" />
                       <span className={`font-display text-xs font-semibold ${selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"}`}>{v.label}</span>
                       <span className="text-[10px] text-slate-600">{v.desc}</span>
                     </button>
@@ -446,8 +460,9 @@ export default function Landing() {
                             <ArrowRight className="w-3 h-3 text-white/35" />
                             <span>{result.route?.destination}</span>
                           </div>
-                          
-                          {result.breakdown && <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">{result.breakdown}</p>}
+                          {result.breakdown && (
+                            <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">{result.breakdown}</p>
+                          )}
                         </div>
                         {result.route?.description && (
                           <div className="mt-4 pt-4 border-t border-white/10">
@@ -485,7 +500,6 @@ export default function Landing() {
                 )}
               </div>
 
-              {/* Skeleton */}
               {routesLoading && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Array.from({ length: ROUTES_PER_PAGE }).map((_, i) => <RouteCardSkeleton key={i} />)}
@@ -531,9 +545,8 @@ export default function Landing() {
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 pt-3 flex items-center justify-between border-t-[1.5px] border-slate-200">
-                          {route.distance_km && <span className="text-xs text-slate-600">{route.distance_km} km</span>}
-                          <span className="font-display font-bold text-base ml-auto text-[#0f2044]">₱{route.fare?.toFixed(2)}</span>
+                        <div className="mt-4 pt-3 flex items-center justify-end border-t-[1.5px] border-slate-200">
+                          <span className="font-display font-bold text-base text-[#0f2044]">₱{route.fare?.toFixed(2)}</span>
                         </div>
                         {route.description && (
                           <div className="mt-3 pt-3 border-t-[1.5px] border-slate-100">
@@ -546,7 +559,6 @@ export default function Landing() {
 
                   {/* Pagination controls */}
                   <div className="flex flex-col items-center mt-8 gap-3">
-                    {/* Progress indicator */}
                     <div className="flex items-center gap-3">
                       <div className="h-1.5 w-32 bg-slate-100 rounded-full overflow-hidden">
                         <div
@@ -558,9 +570,7 @@ export default function Landing() {
                         {Math.min(visibleCount, filteredRoutes.length)} / {filteredRoutes.length}
                       </p>
                     </div>
-
                     <div className="flex items-center gap-2">
-                      {/* View More */}
                       {hasMore && (
                         <button
                           onClick={() => setVisibleCount((prev) => prev + ROUTES_PER_PAGE)}
@@ -570,8 +580,6 @@ export default function Landing() {
                           View {Math.min(remaining, ROUTES_PER_PAGE)} more result{Math.min(remaining, ROUTES_PER_PAGE) !== 1 ? "s" : ""}
                         </button>
                       )}
-
-                      {/* Show Less — only after expanding */}
                       {visibleCount > ROUTES_PER_PAGE && (
                         <button
                           onClick={() => {
