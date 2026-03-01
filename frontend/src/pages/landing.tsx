@@ -366,12 +366,31 @@ export default function Landing() {
                 <div className="w-9 h-0.5 bg-amber-500 rounded-sm mb-2.5" />
                 <h2 className="font-display font-bold text-lg mb-1 text-[#0f2044]">Piliin ang Sasakyan</h2>
                 <p className="text-sm mb-5 text-slate-600">Anong sasakyan ang gagamitin mo?</p>
+
+                <p className="mb-5 text-sm text-slate-600 border-l-2 border-amber-500 pl-3 py-2 bg-amber-50 rounded-sm">
+                  <strong>Note:</strong> I-select ang <span className="font-semibold">Jeep + Tricycle</span>. 
+                  Para sa mga ruta na walang direct jeep, ginagamit ito kapag kailangan magpalit ng sasakyan.
+                </p>
+
                 <div className="grid grid-cols-3 gap-3">
                   {VEHICLES.map((v) => (
-                    <button key={v.type} onClick={() => handleVehicleSelect(v.type)}
-                      className={`cursor-pointer flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 transition-all ${selectedVehicle === v.type ? "border-amber-500 bg-amber-50 shadow-[0_6px_18px_rgba(245,158,11,0.20)] -translate-y-0.5" : "border-slate-200 bg-slate-50 hover:border-[#1a3362] hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,32,68,0.09)]"}`}>
+                    <button
+                      key={v.type}
+                      onClick={() => handleVehicleSelect(v.type)}
+                      className={`cursor-pointer flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 transition-all ${
+                        selectedVehicle === v.type
+                          ? "border-amber-500 bg-amber-50 shadow-[0_6px_18px_rgba(245,158,11,0.20)] -translate-y-0.5"
+                          : "border-slate-200 bg-slate-50 hover:border-[#1a3362] hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,32,68,0.09)]"
+                      }`}
+                    >
                       <VehicleIcon type={v.type} className="h-8 w-8" />
-                      <span className={`font-display text-xs font-semibold ${selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"}`}>{v.label}</span>
+                      <span
+                        className={`font-display text-xs font-semibold ${
+                          selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"
+                        }`}
+                      >
+                        {v.label}
+                      </span>
                       <span className="text-[10px] text-slate-600">{v.desc}</span>
                     </button>
                   ))}
