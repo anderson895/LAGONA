@@ -47,16 +47,15 @@ import {
   Pencil,
   Trash2,
   DollarSign,
-  Navigation,
   Bus,
   Check,
   X,
   Loader2,
 } from "lucide-react"
 
-import JeepneyIcon from "@/components/icons/jeepney.svg";
-import BusIcon from "@/components/icons/bus.svg";
-import TricycleIcon from "@/components/icons/tricycle.svg";
+import JeepneyIcon from "@/components/icons/jeepney.svg"
+import TricycleIcon from "@/components/icons/tricycle.svg"
+
 // API Configuration
 const API_BASE_URL = "https://lagona-oz9x.vercel.app/api"
 
@@ -66,8 +65,7 @@ interface Route {
   origin: string
   destination: string
   fare: number
-  distance_km: number
-  vehicle_type: "jeep" | "bus" | "van" | "tricycle" | "taxi"
+  vehicle_type: "jeep" | "tricycle" | "jeep_and_tricycle"
   description?: string
   is_active: boolean
 }
@@ -76,16 +74,37 @@ interface RouteFormData {
   origin: string
   destination: string
   fare: string
-  distance_km: string
-  vehicle_type: "jeep" | "bus" | "van" | "tricycle" | "taxi"
+  vehicle_type: "jeep" | "tricycle" | "jeep_and_tricycle"
   description: string
 }
 
 const VEHICLE_TYPES = [
   { value: "jeep", label: "Jeepney", icon: JeepneyIcon },
   { value: "tricycle", label: "Tricycle", icon: TricycleIcon },
-] as const;
- 
+  { value: "jeep_and_tricycle", label: "Jeep + Tricycle", icon: null },
+] as const
+
+function VehicleBadge({ type }: { type: string }) {
+  if (type === "jeep_and_tricycle") {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <img src={JeepneyIcon} alt="jeep" className="h-4 w-4" />
+        <img src={TricycleIcon} alt="tricycle" className="h-4 w-4" />
+        Jeep + Tricycle
+      </Badge>
+    )
+  }
+
+  const vehicle = VEHICLE_TYPES.find(v => v.value === type)
+  return (
+    <Badge variant="outline" className="gap-1">
+      {vehicle?.icon && (
+        <img src={vehicle.icon} alt={vehicle.label} className="h-4 w-4" />
+      )}
+      {vehicle?.label || type}
+    </Badge>
+  )
+}
 
 export default function Routes_manages() {
   const [routes, setRoutes] = useState<Route[]>([])
@@ -101,12 +120,10 @@ export default function Routes_manages() {
     origin: "",
     destination: "",
     fare: "",
-    distance_km: "",
     vehicle_type: "jeep",
     description: "",
   })
 
-  // Fetch routes
   const fetchRoutes = async () => {
     try {
       setLoading(true)
@@ -125,7 +142,6 @@ export default function Routes_manages() {
     fetchRoutes()
   }, [filterVehicleType])
 
-  // Create route
   const handleCreateRoute = async () => {
     try {
       setIsSubmitting(true)
@@ -133,15 +149,11 @@ export default function Routes_manages() {
         origin: formData.origin,
         destination: formData.destination,
         fare: parseFloat(formData.fare),
-        distance_km: parseFloat(formData.distance_km),
         vehicle_type: formData.vehicle_type,
         description: formData.description || undefined,
       }
-
       await axios.post(`${API_BASE_URL}/routes`, payload)
-      
       alert("Route created successfully")
-      
       setIsCreateDialogOpen(false)
       resetForm()
       fetchRoutes()
@@ -153,25 +165,19 @@ export default function Routes_manages() {
     }
   }
 
-  // Update route
   const handleUpdateRoute = async () => {
     if (!selectedRoute) return
-
     try {
       setIsSubmitting(true)
       const payload = {
         origin: formData.origin,
         destination: formData.destination,
         fare: parseFloat(formData.fare),
-        distance_km: parseFloat(formData.distance_km),
         vehicle_type: formData.vehicle_type,
         description: formData.description || undefined,
       }
-
       await axios.put(`${API_BASE_URL}/routes/${selectedRoute.id}`, payload)
-      
       alert("Route updated successfully")
-      
       setIsEditDialogOpen(false)
       setSelectedRoute(null)
       resetForm()
@@ -184,16 +190,12 @@ export default function Routes_manages() {
     }
   }
 
-  // Delete route
   const handleDeleteRoute = async () => {
     if (!selectedRoute) return
-
     try {
       setIsSubmitting(true)
       await axios.delete(`${API_BASE_URL}/routes/${selectedRoute.id}`)
-      
       alert("Route deleted successfully")
-      
       setIsDeleteDialogOpen(false)
       setSelectedRoute(null)
       fetchRoutes()
@@ -205,13 +207,11 @@ export default function Routes_manages() {
     }
   }
 
-  // Form helpers
   const resetForm = () => {
     setFormData({
       origin: "",
       destination: "",
       fare: "",
-      distance_km: "",
       vehicle_type: "jeep",
       description: "",
     })
@@ -223,7 +223,6 @@ export default function Routes_manages() {
       origin: route.origin,
       destination: route.destination,
       fare: route.fare.toString(),
-      distance_km: route.distance_km.toString(),
       vehicle_type: route.vehicle_type,
       description: route.description || "",
     })
@@ -235,26 +234,34 @@ export default function Routes_manages() {
     setIsDeleteDialogOpen(true)
   }
 
- const getVehicleIcon = (type: string) => {
-  const vehicle = VEHICLE_TYPES.find(v => v.value === type);
-  return vehicle?.icon || BusIcon; // returns string URL
-};
-
-  const getVehicleLabel = (type: string) => {
-    const vehicle = VEHICLE_TYPES.find(v => v.value === type)
-    return vehicle?.label || type
-  }
-
   const isFormValid = () => {
     return (
       formData.origin.trim() !== "" &&
       formData.destination.trim() !== "" &&
       formData.fare !== "" &&
-      parseFloat(formData.fare) > 0 &&
-      formData.distance_km !== "" &&
-      parseFloat(formData.distance_km) > 0
+      parseFloat(formData.fare) > 0
     )
   }
+
+  const VehicleSelectItems = () => (
+    <>
+      {VEHICLE_TYPES.map(type => (
+        <SelectItem key={type.value} value={type.value}>
+          <div className="flex items-center gap-2">
+            {type.value === "jeep_and_tricycle" ? (
+              <>
+                <img src={JeepneyIcon} alt="jeep" className="h-4 w-4" />
+                <img src={TricycleIcon} alt="tricycle" className="h-4 w-4" />
+              </>
+            ) : (
+              type.icon && <img src={type.icon} alt={type.label} className="h-4 w-4" />
+            )}
+            {type.label}
+          </div>
+        </SelectItem>
+      ))}
+    </>
+  )
 
   return (
     <AdminLayout>
@@ -268,13 +275,13 @@ export default function Routes_manages() {
             </p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} size="lg" className="cursor-pointer">
-            <Plus className="mr-2 h-4 w-4 " />
+            <Plus className="mr-2 h-4 w-4" />
             Add Route
           </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Routes</CardTitle>
@@ -291,22 +298,9 @@ export default function Routes_manages() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ₱{routes.length > 0 
+                ₱{routes.length > 0
                   ? (routes.reduce((sum, r) => sum + r.fare, 0) / routes.length).toFixed(2)
                   : "0.00"}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Distance</CardTitle>
-              <Navigation className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {routes.length > 0
-                  ? (routes.reduce((sum, r) => sum + r.distance_km, 0) / routes.length).toFixed(1)
-                  : "0.0"} km
               </div>
             </CardContent>
           </Card>
@@ -336,11 +330,7 @@ export default function Routes_manages() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Vehicles</SelectItem>
-                {VEHICLE_TYPES.map(type => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
+                <VehicleSelectItems />
               </SelectContent>
             </Select>
           </CardContent>
@@ -379,7 +369,6 @@ export default function Routes_manages() {
                     <TableHead>Origin</TableHead>
                     <TableHead>Destination</TableHead>
                     <TableHead>Vehicle Type</TableHead>
-                    <TableHead>Distance</TableHead>
                     <TableHead>Fare</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Status</TableHead>
@@ -387,72 +376,62 @@ export default function Routes_manages() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {routes.map((route) => {
-                    
-                    return (
-                      <TableRow key={route.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center">
-                            <MapPin className="mr-2 h-4 w-4 text-green-600" />
-                            {route.origin}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <MapPin className="mr-2 h-4 w-4 text-red-600" />
-                            {route.destination}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="gap-1">
-                            <img
-                                src={getVehicleIcon(route.vehicle_type)}
-                                alt={getVehicleLabel(route.vehicle_type)}
-                                className="h-4 w-4"
-                            />
-                            {getVehicleLabel(route.vehicle_type)}
-                            </Badge>
-
-                        </TableCell>
-                        <TableCell>{route.distance_km} km</TableCell>
-                        <TableCell className="font-semibold">₱{route.fare.toFixed(2)}</TableCell>
-                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                          {route.description || "—"}
-                        </TableCell>
-                        <TableCell>
-                          {route.is_active ? (
-                            <Badge variant="default" className="gap-1">
-                              <Check className="h-3 w-3" />
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="gap-1">
-                              <X className="h-3 w-3" />
-                              Inactive
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button className="cursor-pointer"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(route)}
-                            >
-                              <Pencil className="h-4 w-4 " />
-                            </Button>
-                            <Button className="cursor-pointer"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openDeleteDialog(route)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive cursor-pointer" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
+                  {routes.map((route) => (
+                    <TableRow key={route.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center">
+                          <MapPin className="mr-2 h-4 w-4 text-green-600" />
+                          {route.origin}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <MapPin className="mr-2 h-4 w-4 text-red-600" />
+                          {route.destination}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <VehicleBadge type={route.vehicle_type} />
+                      </TableCell>
+                      <TableCell className="font-semibold">₱{route.fare.toFixed(2)}</TableCell>
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                        {route.description || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {route.is_active ? (
+                          <Badge variant="default" className="gap-1">
+                            <Check className="h-3 w-3" />
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="gap-1">
+                            <X className="h-3 w-3" />
+                            Inactive
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            className="cursor-pointer"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(route)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            className="cursor-pointer"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openDeleteDialog(route)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             )}
@@ -476,9 +455,7 @@ export default function Routes_manages() {
                     id="create-origin"
                     placeholder="e.g., Laguna"
                     value={formData.origin}
-                    onChange={(e) =>
-                      setFormData({ ...formData, origin: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -488,9 +465,7 @@ export default function Routes_manages() {
                     id="create-destination"
                     placeholder="e.g., Manila"
                     value={formData.destination}
-                    onChange={(e) =>
-                      setFormData({ ...formData, destination: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -500,7 +475,7 @@ export default function Routes_manages() {
                 <Label htmlFor="create-vehicle">Vehicle Type *</Label>
                 <Select
                   value={formData.vehicle_type}
-                  onValueChange={(value: any) =>
+                  onValueChange={(value: RouteFormData["vehicle_type"]) =>
                     setFormData({ ...formData, vehicle_type: value })
                   }
                   disabled={isSubmitting}
@@ -509,50 +484,23 @@ export default function Routes_manages() {
                     <SelectValue placeholder="Select vehicle type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {VEHICLE_TYPES.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex items-center gap-2">
-                            <img src={type.icon} alt={type.label} className="h-4 w-4" />
-                            {type.label}
-                        </div>
-                        </SelectItem>
-
-                    ))}
+                    <VehicleSelectItems />
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="create-distance">Distance (km) *</Label>
-                  <Input
-                    id="create-distance"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder="e.g., 12.5"
-                    value={formData.distance_km}
-                    onChange={(e) =>
-                      setFormData({ ...formData, distance_km: e.target.value })
-                    }
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="create-fare">Fare (₱) *</Label>
-                  <Input
-                    id="create-fare"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="e.g., 95.00"
-                    value={formData.fare}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fare: e.target.value })
-                    }
-                    disabled={isSubmitting}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-fare">Fare (₱) *</Label>
+                <Input
+                  id="create-fare"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="e.g., 95.00"
+                  value={formData.fare}
+                  onChange={(e) => setFormData({ ...formData, fare: e.target.value })}
+                  disabled={isSubmitting}
+                />
               </div>
 
               <div className="space-y-2">
@@ -561,36 +509,30 @@ export default function Routes_manages() {
                   id="create-description"
                   placeholder="e.g., via main highway"
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                   disabled={isSubmitting}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button className="cursor-pointer"
+              <Button
+                className="cursor-pointer"
                 variant="outline"
-                onClick={() => {
-                  setIsCreateDialogOpen(false)
-                  resetForm()
-                }}
+                onClick={() => { setIsCreateDialogOpen(false); resetForm() }}
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button className="cursor-pointer" onClick={handleCreateRoute} disabled={!isFormValid() || isSubmitting}>
+              <Button
+                className="cursor-pointer"
+                onClick={handleCreateRoute}
+                disabled={!isFormValid() || isSubmitting}
+              >
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</>
                 ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Route
-                  </>
+                  <><Plus className="mr-2 h-4 w-4" />Create Route</>
                 )}
               </Button>
             </DialogFooter>
@@ -602,9 +544,7 @@ export default function Routes_manages() {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Edit Route</DialogTitle>
-              <DialogDescription>
-                Update the route information
-              </DialogDescription>
+              <DialogDescription>Update the route information</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -614,9 +554,7 @@ export default function Routes_manages() {
                     id="edit-origin"
                     placeholder="e.g., Laguna"
                     value={formData.origin}
-                    onChange={(e) =>
-                      setFormData({ ...formData, origin: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -626,9 +564,7 @@ export default function Routes_manages() {
                     id="edit-destination"
                     placeholder="e.g., Manila"
                     value={formData.destination}
-                    onChange={(e) =>
-                      setFormData({ ...formData, destination: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -638,7 +574,7 @@ export default function Routes_manages() {
                 <Label htmlFor="edit-vehicle">Vehicle Type *</Label>
                 <Select
                   value={formData.vehicle_type}
-                  onValueChange={(value: any) =>
+                  onValueChange={(value: RouteFormData["vehicle_type"]) =>
                     setFormData({ ...formData, vehicle_type: value })
                   }
                   disabled={isSubmitting}
@@ -647,50 +583,23 @@ export default function Routes_manages() {
                     <SelectValue placeholder="Select vehicle type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {VEHICLE_TYPES.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex items-center gap-2">
-                            <img src={type.icon} alt={type.label} className="h-4 w-4" />
-                            {type.label}
-                        </div>
-                        </SelectItem>
-
-                    ))}
+                    <VehicleSelectItems />
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-distance">Distance (km) *</Label>
-                  <Input
-                    id="edit-distance"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder="e.g., 12.5"
-                    value={formData.distance_km}
-                    onChange={(e) =>
-                      setFormData({ ...formData, distance_km: e.target.value })
-                    }
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-fare">Fare (₱) *</Label>
-                  <Input
-                    id="edit-fare"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="e.g., 95.00"
-                    value={formData.fare}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fare: e.target.value })
-                    }
-                    disabled={isSubmitting}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-fare">Fare (₱) *</Label>
+                <Input
+                  id="edit-fare"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="e.g., 95.00"
+                  value={formData.fare}
+                  onChange={(e) => setFormData({ ...formData, fare: e.target.value })}
+                  disabled={isSubmitting}
+                />
               </div>
 
               <div className="space-y-2">
@@ -699,9 +608,7 @@ export default function Routes_manages() {
                   id="edit-description"
                   placeholder="e.g., via main highway"
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                   disabled={isSubmitting}
                 />
@@ -710,26 +617,19 @@ export default function Routes_manages() {
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => {
-                  setIsEditDialogOpen(false)
-                  setSelectedRoute(null)
-                  resetForm()
-                }}
+                onClick={() => { setIsEditDialogOpen(false); setSelectedRoute(null); resetForm() }}
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button onClick={handleUpdateRoute} disabled={!isFormValid() || isSubmitting}>
+              <Button
+                onClick={handleUpdateRoute}
+                disabled={!isFormValid() || isSubmitting}
+              >
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating...</>
                 ) : (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Update Route
-                  </>
+                  <><Check className="mr-2 h-4 w-4" />Update Route</>
                 )}
               </Button>
             </DialogFooter>
@@ -750,10 +650,7 @@ export default function Routes_manages() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel
-                onClick={() => {
-                  setIsDeleteDialogOpen(false)
-                  setSelectedRoute(null)
-                }}
+                onClick={() => { setIsDeleteDialogOpen(false); setSelectedRoute(null) }}
                 disabled={isSubmitting}
               >
                 Cancel
@@ -764,10 +661,7 @@ export default function Routes_manages() {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</>
                 ) : (
                   "Delete"
                 )}
