@@ -81,11 +81,9 @@ def admin_required(f):
 def create_app():
     app = Flask(__name__)
 
-    # CORS Configuration - MUST BE BEFORE ROUTES
     CORS(app, resources={
         r"/api/*": {
-            # "origins": ["http://localhost:5173", "http://localhost:3000"],
-            "origins": ["https://lagona.vercel.app","http://localhost:5173", "http://localhost:3000"],
+            "origins": ["https://lagona.vercel.app", "http://localhost:5173", "http://localhost:3000"],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "expose_headers": ["Content-Type"],
@@ -93,7 +91,6 @@ def create_app():
         }
     })
 
-    # Database
     direct_url = build_db_url(os.getenv("DIRECT_URL"))
     app.config["SQLALCHEMY_DATABASE_URI"] = direct_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -137,7 +134,6 @@ def create_app():
         "origin": fields.String(required=True, example="Laguna"),
         "destination": fields.String(required=True, example="Manila"),
         "fare": fields.Float(required=True, example=95.0),
-        "distance_km": fields.Float(required=True, example=12.5),
         "vehicle_type": fields.String(required=True, example="jeep"),
         "description": fields.String(example="via main highway"),
         "is_active": fields.Boolean(example=True),
@@ -147,7 +143,6 @@ def create_app():
         "origin": fields.String(required=True, example="Laguna"),
         "destination": fields.String(required=True, example="Manila"),
         "fare": fields.Float(required=True, example=95.0),
-        "distance_km": fields.Float(required=True, example=12.5),
         "vehicle_type": fields.String(required=True, example="jeep"),
         "description": fields.String(example="via main highway"),
     })
@@ -177,7 +172,6 @@ def create_app():
                 if not check_password_hash(user.hashed_password, data["password"]):
                     return {"message": "Invalid username or password"}, 401
                 
-                # Generate JWT token
                 token = jwt.encode({
                     "user_id": str(user.id),
                     "username": user.username,
@@ -301,15 +295,12 @@ def create_app():
             try:
                 data = request.get_json()
                 
-                # Validate required fields
                 if not data.get("username") or not data.get("email") or not data.get("password"):
                     return {"message": "Username, email, and password are required"}, 400
                 
-                # Check if username exists
                 if User.query.filter_by(username=data["username"]).first():
                     return {"message": "Username already exists"}, 400
                 
-                # Check if email exists
                 if User.query.filter_by(email=data["email"]).first():
                     return {"message": "Email already exists"}, 400
 
@@ -365,12 +356,10 @@ def create_app():
                 
                 data = request.get_json()
                 
-                # Check username uniqueness (if changing)
                 if data.get("username") and data["username"] != user.username:
                     if User.query.filter_by(username=data["username"]).first():
                         return {"message": "Username already exists"}, 400
                 
-                # Check email uniqueness (if changing)
                 if data.get("email") and data["email"] != user.email:
                     if User.query.filter_by(email=data["email"]).first():
                         return {"message": "Email already exists"}, 400
@@ -443,6 +432,9 @@ def create_app():
             """Create a new route"""
             try:
                 data = request.get_json()
+
+                if not data.get("origin") or not data.get("destination") or not data.get("fare") or not data.get("vehicle_type"):
+                    return {"message": "origin, destination, fare, and vehicle_type are required"}, 400
                 
                 if data["vehicle_type"] not in {v.value for v in VehicleTypeEnum}:
                     return {"message": "Invalid vehicle_type"}, 400
@@ -451,7 +443,6 @@ def create_app():
                     origin=data["origin"],
                     destination=data["destination"],
                     fare=data["fare"],
-                    distance_km=data["distance_km"],
                     vehicle_type=VehicleTypeEnum(data["vehicle_type"]),
                     description=data.get("description"),
                 )
@@ -491,7 +482,6 @@ def create_app():
                 route.origin = data.get("origin", route.origin)
                 route.destination = data.get("destination", route.destination)
                 route.fare = data.get("fare", route.fare)
-                route.distance_km = data.get("distance_km", route.distance_km)
                 
                 if data.get("vehicle_type"):
                     if data["vehicle_type"] not in {v.value for v in VehicleTypeEnum}:

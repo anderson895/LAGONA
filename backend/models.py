@@ -9,8 +9,8 @@ db = SQLAlchemy()
 
 class VehicleTypeEnum(enum.Enum):
     jeep = "jeep"
-    bus = "bus"
     tricycle = "tricycle"
+    jeep_and_tricycle = "jeep_and_tricycle"
 
 class User(db.Model):
     __tablename__ = "users"
@@ -22,7 +22,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)  # ← ADD THIS LINE
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 class Route(db.Model):
     __tablename__ = "routes"
@@ -31,12 +31,11 @@ class Route(db.Model):
     origin = db.Column(db.String(100), nullable=False)
     destination = db.Column(db.String(100), nullable=False)
     fare = db.Column(db.Float, nullable=False)
-    distance_km = db.Column(db.Float, nullable=False)
     vehicle_type = db.Column(db.Enum(VehicleTypeEnum), nullable=False)
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)  # ← ADD THIS LINE TOO
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
     def to_dict(self):
         return {
@@ -44,7 +43,6 @@ class Route(db.Model):
             'origin': self.origin,
             'destination': self.destination,
             'fare': float(self.fare),
-            'distance_km': float(self.distance_km),
             'vehicle_type': self.vehicle_type.value,
             'description': self.description,
             'is_active': self.is_active

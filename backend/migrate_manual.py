@@ -15,7 +15,7 @@ DIRECT_URL = _raw.replace("@@", "%40@") if "@@" in _raw else _raw
 
 CREATE_ENUM = """
 DO $$ BEGIN
-    CREATE TYPE vehicle_type_enum AS ENUM ('jeep', 'bus', 'tricycle');
+    CREATE TYPE vehicle_type_enum AS ENUM ('jeep', 'tricycle', 'jeep_and_tricycle');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS routes (
     origin       VARCHAR(255) NOT NULL,
     destination  VARCHAR(255) NOT NULL,
     fare         FLOAT        NOT NULL,
-    distance_km  FLOAT        NOT NULL,
     vehicle_type vehicle_type_enum NOT NULL DEFAULT 'jeep',
     description  TEXT,
     is_active    BOOLEAN NOT NULL DEFAULT TRUE,
