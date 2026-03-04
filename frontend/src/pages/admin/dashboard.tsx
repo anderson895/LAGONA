@@ -48,6 +48,9 @@ interface RecentRoute {
   destination: string
   vehicle_type: string
   fare: number
+  regular: number     // ← added
+  discount: number    // ← added
+  special: number     // ← added
   created_at: string
   is_active?: boolean
 }
@@ -87,7 +90,6 @@ export default function Dashboard() {
         api.get("/users"),
       ])
 
-      // 🚀 FILTER OUT BUS HERE (important)
       const routes = routesRes.data.filter(
         (route: any) => route.vehicle_type !== "bus"
       )
@@ -96,12 +98,8 @@ export default function Dashboard() {
 
       const vehicleTypes = routes.reduce(
         (acc: any, route: any) => {
-          if (route.vehicle_type === "jeep") {
-            acc.jeep += 1
-          }
-          if (route.vehicle_type === "tricycle") {
-            acc.tricycle += 1
-          }
+          if (route.vehicle_type === "jeep") acc.jeep += 1
+          if (route.vehicle_type === "tricycle") acc.tricycle += 1
           return acc
         },
         { jeep: 0, tricycle: 0 }
@@ -165,10 +163,7 @@ export default function Dashboard() {
     datasets: [
       {
         label: "Number of Routes",
-        data: [
-          stats.vehicleTypes.jeep,
-          stats.vehicleTypes.tricycle,
-        ],
+        data: [stats.vehicleTypes.jeep, stats.vehicleTypes.tricycle],
         backgroundColor: ["#2563EB", "#F97316"],
       },
     ],
@@ -215,18 +210,14 @@ export default function Dashboard() {
             {statCards.map((stat) => (
               <Card key={stat.title}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {stat.title}
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
                   <div className={`${stat.bgColor} p-2 rounded-lg`}>
                     <stat.icon className={`h-4 w-4 ${stat.color}`} />
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stat.value}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stat.description}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{stat.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -238,27 +229,25 @@ export default function Dashboard() {
             <Card className="col-span-4">
               <CardHeader>
                 <CardTitle>Recent Routes</CardTitle>
-                <CardDescription>
-                  Latest routes added to the system
-                </CardDescription>
+                <CardDescription>Latest routes added to the system</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Route</TableHead>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Fare</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                 <TableHeader>
+                  <TableRow>
+                    <TableHead>Route</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Base Fare</TableHead>
+                    <TableHead>Regular</TableHead>
+                    <TableHead>Discount</TableHead>
+                    <TableHead>Special</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
                   <TableBody>
                     {recentRoutes.length === 0 ? (
                       <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="text-center text-muted-foreground"
-                        >
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
                           No routes available
                         </TableCell>
                       </TableRow>
@@ -275,8 +264,21 @@ export default function Dashboard() {
                               {route.vehicle_type}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            ₱{route.fare.toFixed(2)}
+                          <TableCell>₱{route.fare.toFixed(2)}</TableCell>
+                          <TableCell>                                     {/* ← added */}
+                            {route.regular > 0
+                              ? <span className="text-slate-700">₱{route.regular.toFixed(2)}</span>
+                              : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell>                                     {/* ← added */}
+                            {route.discount > 0
+                              ? <span className="text-amber-700">₱{route.discount.toFixed(2)}</span>
+                              : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell>                                     {/* ← added */}
+                            {route.special > 0
+                              ? <span className="text-blue-700">₱{route.special.toFixed(2)}</span>
+                              : <span className="text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell>
                             <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
@@ -295,32 +297,20 @@ export default function Dashboard() {
             <Card className="col-span-3">
               <CardHeader>
                 <CardTitle>Vehicle Distribution</CardTitle>
-                <CardDescription>
-                  Routes by vehicle type
-                </CardDescription>
+                <CardDescription>Routes by vehicle type</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {["jeep", "tricycle"].map((type, idx) => {
                   const colors = ["blue-600", "orange-600"]
-                  const nameMap: any = {
-                    jeep: "Jeepney",
-                    tricycle: "Tricycle",
-                  }
-                  const count =
-                    stats.vehicleTypes[
-                      type as keyof typeof stats.vehicleTypes
-                    ]
+                  const nameMap: any = { jeep: "Jeepney", tricycle: "Tricycle" }
+                  const count = stats.vehicleTypes[type as keyof typeof stats.vehicleTypes]
 
                   return (
                     <div className="space-y-3" key={type}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div
-                            className={`h-2 w-2 rounded-full bg-${colors[idx]}`}
-                          />
-                          <span className="text-sm font-medium">
-                            {nameMap[type]}
-                          </span>
+                          <div className={`h-2 w-2 rounded-full bg-${colors[idx]}`} />
+                          <span className="text-sm font-medium">{nameMap[type]}</span>
                         </div>
                         <span className="text-sm font-bold">{count}</span>
                       </div>
@@ -328,11 +318,7 @@ export default function Dashboard() {
                         <div
                           className={`h-full rounded-full bg-${colors[idx]}`}
                           style={{
-                            width: `${
-                              stats.totalRoutes > 0
-                                ? (count / stats.totalRoutes) * 100
-                                : 0
-                            }%`,
+                            width: `${stats.totalRoutes > 0 ? (count / stats.totalRoutes) * 100 : 0}%`,
                           }}
                         />
                       </div>
@@ -347,9 +333,7 @@ export default function Dashboard() {
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Vehicle Distribution Graph</CardTitle>
-              <CardDescription>
-                Visual representation of routes by vehicle type
-              </CardDescription>
+              <CardDescription>Visual representation of routes by vehicle type</CardDescription>
             </CardHeader>
             <CardContent>
               <Bar data={vehicleChartData} options={vehicleChartOptions} />

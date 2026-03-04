@@ -18,6 +18,9 @@ interface Route {
   origin: string
   destination: string
   fare: number
+  regular: number     // ← added
+  discount: number    // ← added
+  special: number     // ← added
   vehicle_type: string
   description?: string
 }
@@ -109,6 +112,30 @@ function RouteDescription({ description, darkMode = false }: { description: stri
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+// --- Fare Breakdown Pills (Regular / Discount / Special) ---     ← added
+function FareBreakdown({ route, darkMode = false }: { route: Route; darkMode?: boolean }) {
+  const fares = [
+    { label: "Regular", value: route.regular, color: darkMode ? "bg-white/[0.08] text-white/70" : "bg-slate-100 text-slate-700" },
+    { label: "Discount", value: route.discount, color: darkMode ? "bg-amber-500/[0.15] text-amber-400" : "bg-amber-50 text-amber-700" },
+    { label: "Special", value: route.special, color: darkMode ? "bg-blue-500/[0.15] text-blue-300" : "bg-blue-50 text-blue-700" },
+  ]
+
+  const hasAnyFare = fares.some(f => f.value > 0)
+  if (!hasAnyFare) return null
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {fares.map(({ label, value, color }) =>
+        value > 0 ? (
+          <span key={label} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold ${color}`}>
+            {label}: ₱{value.toFixed(2)}
+          </span>
+        ) : null
+      )}
     </div>
   )
 }
@@ -368,7 +395,7 @@ export default function Landing() {
                 <p className="text-sm mb-5 text-slate-600">Anong sasakyan ang gagamitin mo?</p>
 
                 <p className="mb-5 text-sm text-slate-600 border-l-2 border-amber-500 pl-3 py-2 bg-amber-50 rounded-sm">
-                  <strong>Note:</strong> I-select ang <span className="font-semibold">Jeep + Tricycle</span>. 
+                  <strong>Note:</strong> I-select ang <span className="font-semibold">Jeep + Tricycle</span>.
                   Para sa mga ruta na walang direct jeep, ginagamit ito kapag kailangan magpalit ng sasakyan.
                 </p>
 
@@ -384,11 +411,7 @@ export default function Landing() {
                       }`}
                     >
                       <VehicleIcon type={v.type} className="h-8 w-8" />
-                      <span
-                        className={`font-display text-xs font-semibold ${
-                          selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"
-                        }`}
-                      >
+                      <span className={`font-display text-xs font-semibold ${selectedVehicle === v.type ? "text-amber-900" : "text-[#0f2044]"}`}>
                         {v.label}
                       </span>
                       <span className="text-[10px] text-slate-600">{v.desc}</span>
@@ -483,6 +506,15 @@ export default function Landing() {
                             <p className="text-xs mt-2 rounded-lg px-3 py-1.5 bg-white/[0.07] text-white/55">{result.breakdown}</p>
                           )}
                         </div>
+
+                        {/* Fare breakdown pills in result card */}
+                        {(result.route.regular > 0 || result.route.discount > 0 || result.route.special > 0) && (
+                          <div className="mt-4 pt-4 border-t border-white/10">   {/* ← added */}
+                            <p className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Breakdown ng Pamasahe</p>
+                            <FareBreakdown route={result.route} darkMode />
+                          </div>
+                        )}
+
                         {result.route?.description && (
                           <div className="mt-4 pt-4 border-t border-white/10">
                             <RouteDescription description={result.route.description} darkMode />
@@ -564,9 +596,19 @@ export default function Landing() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Base fare row */}
                         <div className="mt-4 pt-3 flex items-center justify-end border-t-[1.5px] border-slate-200">
                           <span className="font-display font-bold text-base text-[#0f2044]">₱{route.fare?.toFixed(2)}</span>
                         </div>
+
+                        {/* Fare breakdown pills on card */}
+                        {(route.regular > 0 || route.discount > 0 || route.special > 0) && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>  {/* ← added */}
+                            <FareBreakdown route={route} />
+                          </div>
+                        )}
+
                         {route.description && (
                           <div className="mt-3 pt-3 border-t-[1.5px] border-slate-100">
                             <RouteDescription description={route.description} />
@@ -627,12 +669,7 @@ export default function Landing() {
             <h3 className="font-display text-2xl font-bold mb-4 text-[#0f2044]">May kulang ba sa ruta?</h3>
             <p className="leading-relaxed text-sm md:text-base text-slate-600">
               I-suggest dito ang mga ruta na hindi mo makita sa sistema:{" "}
-              <a
-                href="https://forms.gle/3iT6LzBAa77rfrCRA"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
+              <a href="https://forms.gle/3iT6LzBAa77rfrCRA" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                 https://forms.gle/3iT6LzBAa77rfrCRA
               </a>
             </p>
