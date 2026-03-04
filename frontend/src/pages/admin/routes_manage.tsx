@@ -55,6 +55,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Search,
 } from "lucide-react"
 
 import JeepneyIcon from "@/components/icons/jeepney.svg"
@@ -326,14 +327,23 @@ export default function Routes_manages() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null)
   const [filterVehicleType, setFilterVehicleType] = useState<string>("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState<RouteFormData>(EMPTY_FORM)
+
+  // ── Debounce search input 400ms ───────────────────────────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const fetchRoutes = async (page = pagination.page, limit = pagination.limit) => {
     try {
       setLoading(true)
       const params: Record<string, any> = { page, limit }
       if (filterVehicleType !== "all") params.vehicle_type = filterVehicleType
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim()
 
       const response = await axios.get(`${API_BASE_URL}/routes`, { params })
       const responseData = response.data
@@ -369,11 +379,11 @@ export default function Routes_manages() {
     }
   }
 
-  // Reset to page 1 when filter changes
+  // ── Re-fetch when filter or debounced search changes ─────────────────────
   useEffect(() => {
     setPagination(prev => ({ ...prev, page: 1 }))
     fetchRoutes(1, pagination.limit)
-  }, [filterVehicleType])
+  }, [filterVehicleType, debouncedSearch])
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }))
@@ -535,18 +545,48 @@ export default function Routes_manages() {
         <Card>
           <CardHeader>
             <CardTitle>Filter Routes</CardTitle>
-            <CardDescription>Filter routes by vehicle type</CardDescription>
+            <CardDescription>Search and filter routes by origin, destination, or vehicle type</CardDescription>
           </CardHeader>
           <CardContent>
-            <Select value={filterVehicleType} onValueChange={setFilterVehicleType}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select vehicle type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Vehicles</SelectItem>
-                <VehicleSelectItems />
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-4">
+              {/* Search Input */}
+              <div className="relative w-[300px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search origin or destination..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+
+              {/* Vehicle Type Filter */}
+              <Select value={filterVehicleType} onValueChange={setFilterVehicleType}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select vehicle type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Vehicles</SelectItem>
+                  <VehicleSelectItems />
+                </SelectContent>
+              </Select>
+
+              {/* Clear Filters Button — only shown when filters are active */}
+              {(searchQuery || filterVehicleType !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery("")
+                    setFilterVehicleType("all")
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="mr-1 h-4 w-4" />
+                  Clear filters
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -554,7 +594,11 @@ export default function Routes_manages() {
         <Card>
           <CardHeader>
             <CardTitle>All Routes</CardTitle>
-            <CardDescription>A list of all transportation routes in the system</CardDescription>
+            <CardDescription>
+              {debouncedSearch || filterVehicleType !== "all"
+                ? `Showing ${pagination.total} result${pagination.total !== 1 ? "s" : ""} found`
+                : "A list of all transportation routes in the system"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -564,11 +608,28 @@ export default function Routes_manages() {
             ) : routes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <RouteIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No routes found</p>
-                <Button variant="outline" className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create your first route
-                </Button>
+                {debouncedSearch || filterVehicleType !== "all" ? (
+                  <>
+                    <p className="text-muted-foreground font-medium">No routes match your search</p>
+                    <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters</p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => { setSearchQuery(""); setFilterVehicleType("all") }}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Clear filters
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-muted-foreground">No routes found</p>
+                    <Button variant="outline" className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create your first route
+                    </Button>
+                  </>
+                )}
               </div>
             ) : (
               <>

@@ -414,9 +414,10 @@ def create_app():
     @route_ns.route("")
     class RoutesResource(Resource):
         def get(self):
-            """List all routes with optional vehicle_type filter and pagination"""
+            """List all routes with optional search, vehicle_type filter, and pagination"""
             try:
                 vehicle_type_param = request.args.get('vehicle_type')
+                search_param = request.args.get('search', '').strip()
 
                 # ── Pagination params ──────────────────
                 try:
@@ -431,12 +432,23 @@ def create_app():
 
                 query = Route.query.filter_by(is_active=True)
 
+                # ── Vehicle type filter ────────────────
                 if vehicle_type_param:
                     try:
                         vehicle_enum = VehicleTypeEnum(vehicle_type_param)
                         query = query.filter_by(vehicle_type=vehicle_enum)
                     except ValueError:
                         return {"message": f"Invalid vehicle_type: {vehicle_type_param}"}, 400
+
+                # ── Search filter (origin or destination) ──
+                if search_param:
+                    search_like = f"%{search_param}%"
+                    query = query.filter(
+                        db.or_(
+                            Route.origin.ilike(search_like),
+                            Route.destination.ilike(search_like)
+                        )
+                    )
 
                 total  = query.count()
                 routes = query.offset((page - 1) * limit).limit(limit).all()
