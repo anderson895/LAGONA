@@ -159,7 +159,7 @@ function VehicleIcon({ type, className = "h-8 w-8" }: { type: VehicleType; class
 async function fetchAllRoutes(vehicle: VehicleType): Promise<Route[]> {
   const collected: Route[] = []
   let page = 1
-  const limit = 100 // large page to minimize round-trips
+  const limit = 10 // large page to minimize round-trips
 
   while (true) {
     const res = await axios.get(`${API_BASE_URL}/api/routes`, {
@@ -528,6 +528,31 @@ export default function Landing() {
                     {result && (
                       <Card className="bg-gradient-to-br from-[#0f2044] to-[#1e3d6e] border-0 rounded-2xl p-5 shadow-[0_8px_28px_rgba(15,32,68,0.22)] animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="text-center">
+
+                          {/* ── Regular / Discount / Special ── */}
+                          {(result.route.regular > 0 || result.route.discount > 0 || result.route.special > 0) && (
+                            <div className="flex items-center justify-center gap-2 mb-4">
+                              {result.route.regular > 0 && (
+                                <div className="flex flex-col items-center gap-0.5 bg-white/[0.07] rounded-xl px-3 py-2 min-w-[72px]">
+                                  <span className="text-[9px] uppercase tracking-widest text-white/40 font-semibold">Regular</span>
+                                  <span className="text-sm font-bold text-white/90">₱{result.route.regular.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {result.route.discount > 0 && (
+                                <div className="flex flex-col items-center gap-0.5 bg-white/[0.07] rounded-xl px-3 py-2 min-w-[72px]">
+                                  <span className="text-[9px] uppercase tracking-widest text-white/40 font-semibold">Discount</span>
+                                  <span className="text-sm font-bold text-emerald-400">₱{result.route.discount.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {result.route.special > 0 && (
+                                <div className="flex flex-col items-center gap-0.5 bg-white/[0.07] rounded-xl px-3 py-2 min-w-[72px]">
+                                  <span className="text-[9px] uppercase tracking-widest text-white/40 font-semibold">Special</span>
+                                  <span className="text-sm font-bold text-sky-400">₱{result.route.special.toFixed(2)}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           <p className="text-xs uppercase tracking-widest font-semibold mb-1 text-white/45">Pamasahe</p>
                           <p className="font-display text-4xl font-bold mb-2 text-amber-500">₱{result.fare?.toFixed(2)}</p>
                           <div className="flex items-center justify-center gap-2 text-sm mb-2 text-white/80">
@@ -540,15 +565,9 @@ export default function Landing() {
                           )}
                         </div>
 
-                        {(result.route.regular > 0 || result.route.discount > 0 || result.route.special > 0) && (
-                          <div className="mt-4 pt-4 border-t border-white/10">
-                            <p className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Breakdown ng Pamasahe</p>
-                            <FareBreakdown route={result.route} darkMode />
-                          </div>
-                        )}
 
                         {result.route?.description && (
-                          <div className="mt-4 pt-4 border-t border-white/10">
+                          <div className="mt-1 pt-1 border-t border-white/10">
                             <RouteDescription description={result.route.description} darkMode />
                           </div>
                         )}
