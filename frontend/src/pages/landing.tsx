@@ -18,9 +18,9 @@ interface Route {
   origin: string
   destination: string
   fare: number
-  regular: number     // ← added
-  discount: number    // ← added
-  special: number     // ← added
+  regular: number
+  discount: number
+  special: number
   vehicle_type: string
   description?: string
 }
@@ -116,7 +116,7 @@ function RouteDescription({ description, darkMode = false }: { description: stri
   )
 }
 
-// --- Fare Breakdown Pills (Regular / Discount / Special) ---     ← added
+// --- Fare Breakdown Pills (Regular / Discount / Special) ---
 function FareBreakdown({ route, darkMode = false }: { route: Route; darkMode?: boolean }) {
   const fares = [
     { label: "Regular", value: route.regular, color: darkMode ? "bg-white/[0.08] text-white/70" : "bg-slate-100 text-slate-700" },
@@ -153,6 +153,39 @@ function VehicleIcon({ type, className = "h-8 w-8" }: { type: VehicleType; class
   const vehicle = VEHICLES.find(v => v.type === type)
   if (!vehicle?.icon) return null
   return <img src={vehicle.icon} alt={vehicle.label} className={className} />
+}
+
+// --- Helper: fetch ALL routes for a vehicle type, handling pagination ---
+async function fetchAllRoutes(vehicle: VehicleType): Promise<Route[]> {
+  const collected: Route[] = []
+  let page = 1
+  const limit = 100 // large page to minimize round-trips
+
+  while (true) {
+    const res = await axios.get(`${API_BASE_URL}/api/routes`, {
+      params: { vehicle_type: vehicle, page, limit },
+    })
+
+    const responseData = res.data
+
+    // Support both paginated { data, pagination } and plain array responses
+    if (Array.isArray(responseData)) {
+      const filtered = responseData.filter((r: Route) => r.vehicle_type === vehicle)
+      collected.push(...filtered)
+      break
+    }
+
+    const items: Route[] = responseData.data ?? []
+    const pg = responseData.pagination
+
+    // Filter by vehicle type just in case API doesn't
+    collected.push(...items.filter((r: Route) => r.vehicle_type === vehicle))
+
+    if (!pg || !pg.has_next) break
+    page++
+  }
+
+  return collected
 }
 
 export default function Landing() {
@@ -242,9 +275,9 @@ export default function Landing() {
     setResult(null); setError(null); setOrigin(""); setDestination("")
     setRoutes([]); setFilteredRoutes([]); setRoutesLoading(true)
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/routes`)
-      const filtered = (res.data || []).filter((r: Route) => r.vehicle_type === vehicle)
-      setRoutes(filtered); setFilteredRoutes(filtered)
+      const allRoutes = await fetchAllRoutes(vehicle)
+      setRoutes(allRoutes)
+      setFilteredRoutes(allRoutes)
     } catch (err) {
       console.error("Error fetching routes:", err)
       setRoutes([]); setFilteredRoutes([])
@@ -507,9 +540,8 @@ export default function Landing() {
                           )}
                         </div>
 
-                        {/* Fare breakdown pills in result card */}
                         {(result.route.regular > 0 || result.route.discount > 0 || result.route.special > 0) && (
-                          <div className="mt-4 pt-4 border-t border-white/10">   {/* ← added */}
+                          <div className="mt-4 pt-4 border-t border-white/10">
                             <p className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Breakdown ng Pamasahe</p>
                             <FareBreakdown route={result.route} darkMode />
                           </div>
@@ -597,14 +629,12 @@ export default function Landing() {
                           </div>
                         </div>
 
-                        {/* Base fare row */}
                         <div className="mt-4 pt-3 flex items-center justify-end border-t-[1.5px] border-slate-200">
                           <span className="font-display font-bold text-base text-[#0f2044]">₱{route.fare?.toFixed(2)}</span>
                         </div>
 
-                        {/* Fare breakdown pills on card */}
                         {(route.regular > 0 || route.discount > 0 || route.special > 0) && (
-                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>  {/* ← added */}
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                             <FareBreakdown route={route} />
                           </div>
                         )}
@@ -618,7 +648,7 @@ export default function Landing() {
                     ))}
                   </div>
 
-                  {/* Pagination controls */}
+                  {/* Load more / show less controls */}
                   <div className="flex flex-col items-center mt-8 gap-3">
                     <div className="flex items-center gap-3">
                       <div className="h-1.5 w-32 bg-slate-100 rounded-full overflow-hidden">

@@ -51,6 +51,10 @@ import {
   Check,
   X,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react"
 
 import JeepneyIcon from "@/components/icons/jeepney.svg"
@@ -64,21 +68,30 @@ interface Route {
   origin: string
   destination: string
   fare: number
-  regular: number       // ← added
-  discount: number      // ← added
-  special: number       // ← added
+  regular: number
+  discount: number
+  special: number
   vehicle_type: "jeep" | "tricycle" | "jeep_and_tricycle"
   description?: string
   is_active: boolean
+}
+
+interface Pagination {
+  page: number
+  limit: number
+  total: number
+  pages: number
+  has_next: boolean
+  has_prev: boolean
 }
 
 interface RouteFormData {
   origin: string
   destination: string
   fare: string
-  regular: string       // ← added
-  discount: string      // ← added
-  special: string       // ← added
+  regular: string
+  discount: string
+  special: string
   vehicle_type: "jeep" | "tricycle" | "jeep_and_tricycle"
   description: string
 }
@@ -89,6 +102,21 @@ const VEHICLE_TYPES = [
   { value: "jeep_and_tricycle", label: "Jeep + Tricycle", icon: null },
 ] as const
 
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50]
+
+// ── Default form state ────────────────────────────────────────────────────────
+const EMPTY_FORM: RouteFormData = {
+  origin: "",
+  destination: "",
+  fare: "",
+  regular: "",
+  discount: "",
+  special: "",
+  vehicle_type: "jeep",
+  description: "",
+}
+
+// ── Sub-components defined OUTSIDE to prevent remount lag ────────────────────
 function VehicleBadge({ type }: { type: string }) {
   if (type === "jeep_and_tricycle") {
     return (
@@ -108,135 +136,8 @@ function VehicleBadge({ type }: { type: string }) {
   )
 }
 
-// ── Default form state ────────────────────────────────────────────────────────
-const EMPTY_FORM: RouteFormData = {
-  origin: "",
-  destination: "",
-  fare: "",
-  regular: "",          // ← added
-  discount: "",         // ← added
-  special: "",          // ← added
-  vehicle_type: "jeep",
-  description: "",
-}
-
-export default function Routes_manages() {
-  const [routes, setRoutes] = useState<Route[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null)
-  const [filterVehicleType, setFilterVehicleType] = useState<string>("all")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formData, setFormData] = useState<RouteFormData>(EMPTY_FORM)
-
-  const fetchRoutes = async () => {
-    try {
-      setLoading(true)
-      const params = filterVehicleType !== "all" ? { vehicle_type: filterVehicleType } : {}
-      const response = await axios.get(`${API_BASE_URL}/routes`, { params })
-      setRoutes(response.data)
-    } catch (error) {
-      console.error("Error fetching routes:", error)
-      alert("Failed to fetch routes. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { fetchRoutes() }, [filterVehicleType])
-
-  // ── Shared payload builder ────────────────────────────────────────────────
-  const buildPayload = () => ({
-    origin: formData.origin,
-    destination: formData.destination,
-    fare: parseFloat(formData.fare),
-    regular: parseFloat(formData.regular) || 0,      // ← added
-    discount: parseFloat(formData.discount) || 0,    // ← added
-    special: parseFloat(formData.special) || 0,      // ← added
-    vehicle_type: formData.vehicle_type,
-    description: formData.description || undefined,
-  })
-
-  const handleCreateRoute = async () => {
-    try {
-      setIsSubmitting(true)
-      await axios.post(`${API_BASE_URL}/routes`, buildPayload())
-      alert("Route created successfully")
-      setIsCreateDialogOpen(false)
-      setFormData(EMPTY_FORM)
-      fetchRoutes()
-    } catch (error: any) {
-      console.error("Error creating route:", error)
-      alert(error.response?.data?.message || "Failed to create route")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleUpdateRoute = async () => {
-    if (!selectedRoute) return
-    try {
-      setIsSubmitting(true)
-      await axios.put(`${API_BASE_URL}/routes/${selectedRoute.id}`, buildPayload())
-      alert("Route updated successfully")
-      setIsEditDialogOpen(false)
-      setSelectedRoute(null)
-      setFormData(EMPTY_FORM)
-      fetchRoutes()
-    } catch (error: any) {
-      console.error("Error updating route:", error)
-      alert(error.response?.data?.message || "Failed to update route")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleDeleteRoute = async () => {
-    if (!selectedRoute) return
-    try {
-      setIsSubmitting(true)
-      await axios.delete(`${API_BASE_URL}/routes/${selectedRoute.id}`)
-      alert("Route deleted successfully")
-      setIsDeleteDialogOpen(false)
-      setSelectedRoute(null)
-      fetchRoutes()
-    } catch (error: any) {
-      console.error("Error deleting route:", error)
-      alert(error.response?.data?.message || "Failed to delete route")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const openEditDialog = (route: Route) => {
-    setSelectedRoute(route)
-    setFormData({
-      origin: route.origin,
-      destination: route.destination,
-      fare: route.fare.toString(),
-      regular: route.regular.toString(),     // ← added
-      discount: route.discount.toString(),   // ← added
-      special: route.special.toString(),     // ← added
-      vehicle_type: route.vehicle_type,
-      description: route.description || "",
-    })
-    setIsEditDialogOpen(true)
-  }
-
-  const openDeleteDialog = (route: Route) => {
-    setSelectedRoute(route)
-    setIsDeleteDialogOpen(true)
-  }
-
-  const isFormValid = () =>
-    formData.origin.trim() !== "" &&
-    formData.destination.trim() !== "" &&
-    formData.fare !== "" &&
-    parseFloat(formData.fare) > 0
-
-  const VehicleSelectItems = () => (
+function VehicleSelectItems() {
+  return (
     <>
       {VEHICLE_TYPES.map(type => (
         <SelectItem key={type.value} value={type.value}>
@@ -255,18 +156,29 @@ export default function Routes_manages() {
       ))}
     </>
   )
+}
 
-  // ── Reusable fare fields block (used in both Create & Edit dialogs) ────────
-  const FareFields = () => (
+function FareFields({
+  formData,
+  setFormData,
+  isSubmitting,
+}: {
+  formData: RouteFormData
+  setFormData: React.Dispatch<React.SetStateAction<RouteFormData>>
+  isSubmitting: boolean
+}) {
+  return (
     <>
       <div className="space-y-2">
         <Label htmlFor="fare">Base Fare (₱) *</Label>
         <Input
           id="fare"
-          type="number" step="0.01" min="0"
+          type="number"
+          step="0.01"
+          min="0"
           placeholder="e.g., 95.00"
           value={formData.fare}
-          onChange={(e) => setFormData({ ...formData, fare: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, fare: e.target.value }))}
           disabled={isSubmitting}
         />
       </div>
@@ -275,10 +187,12 @@ export default function Routes_manages() {
           <Label htmlFor="regular">Regular (₱)</Label>
           <Input
             id="regular"
-            type="number" step="0.01" min="0"
+            type="number"
+            step="0.01"
+            min="0"
             placeholder="e.g., 95.00"
             value={formData.regular}
-            onChange={(e) => setFormData({ ...formData, regular: e.target.value })}
+            onChange={(e) => setFormData(prev => ({ ...prev, regular: e.target.value }))}
             disabled={isSubmitting}
           />
         </div>
@@ -286,10 +200,12 @@ export default function Routes_manages() {
           <Label htmlFor="discount">Discount (₱)</Label>
           <Input
             id="discount"
-            type="number" step="0.01" min="0"
+            type="number"
+            step="0.01"
+            min="0"
             placeholder="e.g., 75.00"
             value={formData.discount}
-            onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
+            onChange={(e) => setFormData(prev => ({ ...prev, discount: e.target.value }))}
             disabled={isSubmitting}
           />
         </div>
@@ -297,16 +213,270 @@ export default function Routes_manages() {
           <Label htmlFor="special">Special (₱)</Label>
           <Input
             id="special"
-            type="number" step="0.01" min="0"
+            type="number"
+            step="0.01"
+            min="0"
             placeholder="e.g., 110.00"
             value={formData.special}
-            onChange={(e) => setFormData({ ...formData, special: e.target.value })}
+            onChange={(e) => setFormData(prev => ({ ...prev, special: e.target.value }))}
             disabled={isSubmitting}
           />
         </div>
       </div>
     </>
   )
+}
+
+// ── Pagination Controls Component ─────────────────────────────────────────────
+function PaginationControls({
+  pagination,
+  onPageChange,
+  onLimitChange,
+}: {
+  pagination: Pagination
+  onPageChange: (page: number) => void
+  onLimitChange: (limit: number) => void
+}) {
+  const { page, limit, total, pages, has_next, has_prev } = pagination
+  const from = total === 0 ? 0 : (page - 1) * limit + 1
+  const to = Math.min(page * limit, total)
+
+  return (
+    <div className="flex items-center justify-between px-2 pt-4">
+      {/* Rows per page */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span>Rows per page:</span>
+        <Select value={String(limit)} onValueChange={(v) => onLimitChange(Number(v))}>
+          <SelectTrigger className="h-8 w-[70px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZE_OPTIONS.map(n => (
+              <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Page info + nav */}
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-muted-foreground">
+          {from}–{to} of {total}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onPageChange(1)}
+            disabled={!has_prev}
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onPageChange(page - 1)}
+            disabled={!has_prev}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="min-w-[80px] text-center text-sm">
+            Page {page} of {pages || 1}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onPageChange(page + 1)}
+            disabled={!has_next}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onPageChange(pages)}
+            disabled={!has_next}
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
+export default function Routes_manages() {
+  const [routes, setRoutes] = useState<Route[]>([])
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+    has_next: false,
+    has_prev: false,
+  })
+  const [loading, setLoading] = useState(true)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null)
+  const [filterVehicleType, setFilterVehicleType] = useState<string>("all")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formData, setFormData] = useState<RouteFormData>(EMPTY_FORM)
+
+  const fetchRoutes = async (page = pagination.page, limit = pagination.limit) => {
+    try {
+      setLoading(true)
+      const params: Record<string, any> = { page, limit }
+      if (filterVehicleType !== "all") params.vehicle_type = filterVehicleType
+
+      const response = await axios.get(`${API_BASE_URL}/routes`, { params })
+      const responseData = response.data
+
+      // Support both paginated { data, pagination } and plain array responses
+      if (Array.isArray(responseData)) {
+        setRoutes(responseData)
+        setPagination(prev => ({
+          ...prev,
+          page,
+          limit,
+          total: responseData.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+        }))
+      } else {
+        setRoutes(responseData.data ?? [])
+        setPagination(responseData.pagination ?? {
+          page,
+          limit,
+          total: 0,
+          pages: 0,
+          has_next: false,
+          has_prev: false,
+        })
+      }
+    } catch (error) {
+      console.error("Error fetching routes:", error)
+      alert("Failed to fetch routes. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }))
+    fetchRoutes(1, pagination.limit)
+  }, [filterVehicleType])
+
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }))
+    fetchRoutes(newPage, pagination.limit)
+  }
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination(prev => ({ ...prev, page: 1, limit: newLimit }))
+    fetchRoutes(1, newLimit)
+  }
+
+  // ── Shared payload builder ────────────────────────────────────────────────
+  const buildPayload = () => ({
+    origin: formData.origin,
+    destination: formData.destination,
+    fare: parseFloat(formData.fare),
+    regular: parseFloat(formData.regular) || 0,
+    discount: parseFloat(formData.discount) || 0,
+    special: parseFloat(formData.special) || 0,
+    vehicle_type: formData.vehicle_type,
+    description: formData.description || undefined,
+  })
+
+  const handleCreateRoute = async () => {
+    try {
+      setIsSubmitting(true)
+      await axios.post(`${API_BASE_URL}/routes`, buildPayload())
+      alert("Route created successfully")
+      setIsCreateDialogOpen(false)
+      setFormData(EMPTY_FORM)
+      fetchRoutes(1, pagination.limit)
+    } catch (error: any) {
+      console.error("Error creating route:", error)
+      alert(error.response?.data?.message || "Failed to create route")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleUpdateRoute = async () => {
+    if (!selectedRoute) return
+    try {
+      setIsSubmitting(true)
+      await axios.put(`${API_BASE_URL}/routes/${selectedRoute.id}`, buildPayload())
+      alert("Route updated successfully")
+      setIsEditDialogOpen(false)
+      setSelectedRoute(null)
+      setFormData(EMPTY_FORM)
+      fetchRoutes(pagination.page, pagination.limit)
+    } catch (error: any) {
+      console.error("Error updating route:", error)
+      alert(error.response?.data?.message || "Failed to update route")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteRoute = async () => {
+    if (!selectedRoute) return
+    try {
+      setIsSubmitting(true)
+      await axios.delete(`${API_BASE_URL}/routes/${selectedRoute.id}`)
+      alert("Route deleted successfully")
+      setIsDeleteDialogOpen(false)
+      setSelectedRoute(null)
+      // If deleting the last item on a page > 1, go back one page
+      const newPage = routes.length === 1 && pagination.page > 1
+        ? pagination.page - 1
+        : pagination.page
+      fetchRoutes(newPage, pagination.limit)
+    } catch (error: any) {
+      console.error("Error deleting route:", error)
+      alert(error.response?.data?.message || "Failed to delete route")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const openEditDialog = (route: Route) => {
+    setSelectedRoute(route)
+    setFormData({
+      origin: route.origin,
+      destination: route.destination,
+      fare: (route.fare ?? 0).toString(),
+      regular: (route.regular ?? 0).toString(),
+      discount: (route.discount ?? 0).toString(),
+      special: (route.special ?? 0).toString(),
+      vehicle_type: route.vehicle_type,
+      description: route.description || "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const openDeleteDialog = (route: Route) => {
+    setSelectedRoute(route)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const isFormValid = () =>
+    formData.origin.trim() !== "" &&
+    formData.destination.trim() !== "" &&
+    formData.fare !== "" &&
+    parseFloat(formData.fare) > 0
 
   return (
     <AdminLayout>
@@ -332,7 +502,7 @@ export default function Routes_manages() {
               <RouteIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{routes.length}</div>
+              <div className="text-2xl font-bold">{pagination.total}</div>
             </CardContent>
           </Card>
           <Card>
@@ -401,71 +571,80 @@ export default function Routes_manages() {
                 </Button>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Origin</TableHead>
-                    <TableHead>Destination</TableHead>
-                    <TableHead>Vehicle Type</TableHead>
-                    <TableHead>Base Fare</TableHead>
-                    <TableHead>Regular</TableHead>
-                    <TableHead>Discount</TableHead>
-                    <TableHead>Special</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {routes.map((route) => (
-                <TableRow key={route.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center">
-                      <MapPin className="mr-2 h-4 w-4 text-green-600" />
-                      {route.origin}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <MapPin className="mr-2 h-4 w-4 text-red-600" />
-                      {route.destination}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <VehicleBadge type={route.vehicle_type} />
-                  </TableCell>
-                  <TableCell className="font-semibold">₱{(route.fare ?? 0).toFixed(2)}</TableCell>
-                  <TableCell>₱{(route.regular ?? 0).toFixed(2)}</TableCell>
-                  <TableCell>₱{(route.discount ?? 0).toFixed(2)}</TableCell>
-                  <TableCell>₱{(route.special ?? 0).toFixed(2)}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                    {route.description || "—"}
-                  </TableCell>
-                  <TableCell>
-                    {route.is_active ? (
-                      <Badge variant="default" className="gap-1">
-                        <Check className="h-3 w-3" />Active
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="gap-1">
-                        <X className="h-3 w-3" />Inactive
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button className="cursor-pointer" variant="ghost" size="icon" onClick={() => openEditDialog(route)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button className="cursor-pointer" variant="ghost" size="icon" onClick={() => openDeleteDialog(route)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-                </TableBody>
-              </Table>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Origin</TableHead>
+                      <TableHead>Destination</TableHead>
+                      <TableHead>Vehicle Type</TableHead>
+                      <TableHead>Base Fare</TableHead>
+                      <TableHead>Regular</TableHead>
+                      <TableHead>Discount</TableHead>
+                      <TableHead>Special</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {routes.map((route) => (
+                      <TableRow key={route.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <MapPin className="mr-2 h-4 w-4 text-green-600" />
+                            {route.origin}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <MapPin className="mr-2 h-4 w-4 text-red-600" />
+                            {route.destination}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <VehicleBadge type={route.vehicle_type} />
+                        </TableCell>
+                        <TableCell className="font-semibold">₱{(route.fare ?? 0).toFixed(2)}</TableCell>
+                        <TableCell>₱{(route.regular ?? 0).toFixed(2)}</TableCell>
+                        <TableCell>₱{(route.discount ?? 0).toFixed(2)}</TableCell>
+                        <TableCell>₱{(route.special ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                          {route.description || "—"}
+                        </TableCell>
+                        <TableCell>
+                          {route.is_active ? (
+                            <Badge variant="default" className="gap-1">
+                              <Check className="h-3 w-3" />Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="gap-1">
+                              <X className="h-3 w-3" />Inactive
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button className="cursor-pointer" variant="ghost" size="icon" onClick={() => openEditDialog(route)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button className="cursor-pointer" variant="ghost" size="icon" onClick={() => openDeleteDialog(route)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination Controls */}
+                <PaginationControls
+                  pagination={pagination}
+                  onPageChange={handlePageChange}
+                  onLimitChange={handleLimitChange}
+                />
+              </>
             )}
           </CardContent>
         </Card>
@@ -485,7 +664,7 @@ export default function Routes_manages() {
                     id="create-origin"
                     placeholder="e.g., Laguna"
                     value={formData.origin}
-                    onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, origin: e.target.value }))}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -495,7 +674,7 @@ export default function Routes_manages() {
                     id="create-destination"
                     placeholder="e.g., Manila"
                     value={formData.destination}
-                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, destination: e.target.value }))}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -505,7 +684,7 @@ export default function Routes_manages() {
                 <Select
                   value={formData.vehicle_type}
                   onValueChange={(value: RouteFormData["vehicle_type"]) =>
-                    setFormData({ ...formData, vehicle_type: value })
+                    setFormData(prev => ({ ...prev, vehicle_type: value }))
                   }
                   disabled={isSubmitting}
                 >
@@ -517,14 +696,14 @@ export default function Routes_manages() {
                   </SelectContent>
                 </Select>
               </div>
-              <FareFields />  {/* ← base fare + regular/discount/special */}
+              <FareFields formData={formData} setFormData={setFormData} isSubmitting={isSubmitting} />
               <div className="space-y-2">
                 <Label htmlFor="create-description">Description (Optional)</Label>
                 <Textarea
                   id="create-description"
                   placeholder="e.g., via main highway"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
                   disabled={isSubmitting}
                 />
@@ -562,7 +741,7 @@ export default function Routes_manages() {
                     id="edit-origin"
                     placeholder="e.g., Laguna"
                     value={formData.origin}
-                    onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, origin: e.target.value }))}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -572,7 +751,7 @@ export default function Routes_manages() {
                     id="edit-destination"
                     placeholder="e.g., Manila"
                     value={formData.destination}
-                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, destination: e.target.value }))}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -582,7 +761,7 @@ export default function Routes_manages() {
                 <Select
                   value={formData.vehicle_type}
                   onValueChange={(value: RouteFormData["vehicle_type"]) =>
-                    setFormData({ ...formData, vehicle_type: value })
+                    setFormData(prev => ({ ...prev, vehicle_type: value }))
                   }
                   disabled={isSubmitting}
                 >
@@ -594,14 +773,14 @@ export default function Routes_manages() {
                   </SelectContent>
                 </Select>
               </div>
-              <FareFields />  {/* ← base fare + regular/discount/special */}
+              <FareFields formData={formData} setFormData={setFormData} isSubmitting={isSubmitting} />
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Description (Optional)</Label>
                 <Textarea
                   id="edit-description"
                   placeholder="e.g., via main highway"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
                   disabled={isSubmitting}
                 />
