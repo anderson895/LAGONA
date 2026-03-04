@@ -31,6 +31,9 @@ class Route(db.Model):
     origin = db.Column(db.String(100), nullable=False)
     destination = db.Column(db.String(100), nullable=False)
     fare = db.Column(db.Float, nullable=False)
+    regular = db.Column(db.Float, nullable=False, default=0.0)
+    discount = db.Column(db.Float, nullable=False, default=0.0)
+    special = db.Column(db.Float, nullable=False, default=0.0)
     vehicle_type = db.Column(db.Enum(VehicleTypeEnum), nullable=False)
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
@@ -43,6 +46,9 @@ class Route(db.Model):
             'origin': self.origin,
             'destination': self.destination,
             'fare': float(self.fare),
+            'regular': float(self.regular),
+            'discount': float(self.discount),
+            'special': float(self.special),
             'vehicle_type': self.vehicle_type.value,
             'description': self.description,
             'is_active': self.is_active

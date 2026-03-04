@@ -134,6 +134,9 @@ def create_app():
         "origin": fields.String(required=True, example="Laguna"),
         "destination": fields.String(required=True, example="Manila"),
         "fare": fields.Float(required=True, example=95.0),
+        "regular": fields.Float(example=95.0),
+        "discount": fields.Float(example=75.0),
+        "special": fields.Float(example=110.0),
         "vehicle_type": fields.String(required=True, example="jeep"),
         "description": fields.String(example="via main highway"),
         "is_active": fields.Boolean(example=True),
@@ -143,6 +146,9 @@ def create_app():
         "origin": fields.String(required=True, example="Laguna"),
         "destination": fields.String(required=True, example="Manila"),
         "fare": fields.Float(required=True, example=95.0),
+        "regular": fields.Float(example=95.0),
+        "discount": fields.Float(example=75.0),
+        "special": fields.Float(example=110.0),
         "vehicle_type": fields.String(required=True, example="jeep"),
         "description": fields.String(example="via main highway"),
     })
@@ -408,21 +414,46 @@ def create_app():
     @route_ns.route("")
     class RoutesResource(Resource):
         def get(self):
-            """List all routes with optional vehicle_type filter"""
+            """List all routes with optional vehicle_type filter and pagination"""
             try:
                 vehicle_type_param = request.args.get('vehicle_type')
+
+                # ── Pagination params ──────────────────
+                try:
+                    page  = int(request.args.get('page', 1))
+                    limit = int(request.args.get('limit', 10))
+                    if page < 1:
+                        page = 1
+                    if limit < 1 or limit > 100:
+                        limit = 10
+                except ValueError:
+                    return {"message": "page and limit must be integers"}, 400
+
                 query = Route.query.filter_by(is_active=True)
-                
+
                 if vehicle_type_param:
                     try:
                         vehicle_enum = VehicleTypeEnum(vehicle_type_param)
                         query = query.filter_by(vehicle_type=vehicle_enum)
                     except ValueError:
                         return {"message": f"Invalid vehicle_type: {vehicle_type_param}"}, 400
-                
-                routes = query.all()
-                return [route.to_dict() for route in routes], 200
-                
+
+                total  = query.count()
+                routes = query.offset((page - 1) * limit).limit(limit).all()
+                pages  = (total + limit - 1) // limit  # ceiling division
+
+                return {
+                    "data": [route.to_dict() for route in routes],
+                    "pagination": {
+                        "page":     page,
+                        "limit":    limit,
+                        "total":    total,
+                        "pages":    pages,
+                        "has_next": page < pages,
+                        "has_prev": page > 1,
+                    }
+                }, 200
+
             except Exception as e:
                 print(f"Error in GET /api/routes: {str(e)}")
                 return {"message": "Internal server error", "error": str(e)}, 500
@@ -443,6 +474,9 @@ def create_app():
                     origin=data["origin"],
                     destination=data["destination"],
                     fare=data["fare"],
+                    regular=data.get("regular", 0.0),
+                    discount=data.get("discount", 0.0),
+                    special=data.get("special", 0.0),
                     vehicle_type=VehicleTypeEnum(data["vehicle_type"]),
                     description=data.get("description"),
                 )
@@ -482,6 +516,9 @@ def create_app():
                 route.origin = data.get("origin", route.origin)
                 route.destination = data.get("destination", route.destination)
                 route.fare = data.get("fare", route.fare)
+                route.regular = data.get("regular", route.regular)
+                route.discount = data.get("discount", route.discount)
+                route.special = data.get("special", route.special)
                 
                 if data.get("vehicle_type"):
                     if data["vehicle_type"] not in {v.value for v in VehicleTypeEnum}:
